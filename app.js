@@ -208,7 +208,7 @@ function renderGoogleButton(){
   const box=$('#googleSignIn');
   if(!box||!googleInitialized||!window.google?.accounts?.id)return;
   box.innerHTML='';
-  window.google.accounts.id.renderButton(box,{theme:'outline',size:'large',text:authMode==='register'?'signup_with':'signin_with',shape:'rectangular',logo_alignment:'left',width:360,use_fedcm_for_button:true,button_auto_select:true});
+  window.google.accounts.id.renderButton(box,{theme:'outline',size:'large',text:authMode==='register'?'signup_with':'signin_with',shape:'rectangular',logo_alignment:'left',width:360});
 }
 async function handleGoogleCredential(response){
   if(!response?.credential)return;
@@ -246,9 +246,8 @@ async function initGoogleAuth(){
     let tries=0;
     const boot=()=>{
       if(window.google?.accounts?.id){
-        window.google.accounts.id.initialize({client_id:googleClientId,callback:handleGoogleCredential,auto_select:true,use_fedcm_for_prompt:true});
+        window.google.accounts.id.initialize({client_id:googleClientId,callback:handleGoogleCredential});
         googleInitialized=true;renderGoogleButton();
-        if(!currentUser)window.google.accounts.id.prompt();
       }else if(tries++<100)setTimeout(boot,100);
     };
     boot();

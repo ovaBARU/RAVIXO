@@ -40,7 +40,7 @@ async function verifyGoogleCredential(credential){
   const p=await r.json();
   if(p.aud!==process.env.GOOGLE_CLIENT_ID)throw new Error('Token Google bukan untuk aplikasi RAVIXO.');
   if(p.iss!=='https://accounts.google.com'&&p.iss!=='accounts.google.com')throw new Error('Penerbit token Google tidak valid.');
-  if(!p.email||p.email_verified!=='true')throw new Error('Email Google belum terverifikasi.');
+  if(!p.email||!(p.email_verified===true||p.email_verified==='true'))throw new Error('Email Google belum terverifikasi.');
   return p;
 }
 function googleUsername(email,name){
@@ -52,7 +52,7 @@ app.post('/api/auth/google',async(req,res)=>{try{
   const email=String(p.email).toLowerCase().trim();
   const existing=await pool.query('SELECT * FROM users WHERE lower(email)=$1',[email]);
   if(existing.rowCount){const u=existing.rows[0];return res.json({token:sign(u),user:{id:u.id,email:u.email,phone:u.phone,display_name:u.display_name,username:u.username}})}
-  if(!req.body.phone)return res.status(409).json({needs_phone:true,email,display_name:String(p.name||email.split('@')[0]).slice(0,100),username:googleUsername(email,p.name),message:'Untuk membuat akun baru dengan Google, masukkan nomor HP satu kali.'});
+  if(!req.body.phone)return res.status(409).json({needs_phone:true,email,display_name:String(p.name||email.split('@')[0]).slice(0,100),username:googleUsername(email,p.name),error:'Untuk membuat akun baru dengan Google, masukkan nomor HP satu kali.',message:'Untuk membuat akun baru dengan Google, masukkan nomor HP satu kali.'});
   const phone=String(req.body.phone||'').replace(/[^0-9+]/g,'');
   if(!/^\+?[0-9]{9,15}$/.test(phone))return res.status(400).json({error:'Nomor HP tidak valid. Gunakan 9-15 digit, boleh diawali +.'});
   const displayName=String(req.body.display_name||p.name||email.split('@')[0]).trim().slice(0,100);

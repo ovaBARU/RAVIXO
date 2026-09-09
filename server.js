@@ -52,9 +52,9 @@ app.post('/api/auth/google',async(req,res)=>{try{
   const email=String(p.email).toLowerCase().trim();
   const existing=await pool.query('SELECT * FROM users WHERE lower(email)=$1',[email]);
   if(existing.rowCount){const u=existing.rows[0];return res.json({token:sign(u),user:{id:u.id,email:u.email,phone:u.phone,display_name:u.display_name,username:u.username}})}
-  if(!req.body.phone)return res.status(409).json({needs_phone:true,email,display_name:String(p.name||email.split('@')[0]).slice(0,100),username:googleUsername(email,p.name),error:'Untuk membuat akun baru dengan Google, masukkan nomor HP satu kali.',message:'Untuk membuat akun baru dengan Google, masukkan nomor HP satu kali.'});
-  const phone=String(req.body.phone||'').replace(/[^0-9+]/g,'');
-  if(!/^\+?[0-9]{9,15}$/.test(phone))return res.status(400).json({error:'Nomor HP tidak valid. Gunakan 9-15 digit, boleh diawali +.'});
+  // Pendaftaran lewat Google One Tap tidak mewajibkan nomor HP.
+  // Nomor HP tetap wajib untuk pendaftaran manual melalui form Daftar.
+  const phone=null;
   const displayName=String(req.body.display_name||p.name||email.split('@')[0]).trim().slice(0,100);
   let username=String(req.body.username||googleUsername(email,p.name)).trim().toLowerCase().replace(/[^a-z0-9_]/g,'').slice(0,30)||'ravixo';
   const taken=await pool.query('SELECT 1 FROM users WHERE lower(username)=$1',[username]);

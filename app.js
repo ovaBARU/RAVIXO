@@ -1,5 +1,5 @@
 const API_BASE=window.RAVIXO_API_BASE||'/api',TOKEN_KEY='ravixo_token';
-let currentUser=null,currentPosts=[],selectedPost=null,selectedMedia=null,authMode='login',selectedChatUser=null,chatPoll=null,notificationPoll=null,currentFriendTab='friends',currentAlbumType=null;
+let currentUser=null,currentPosts=[],selectedPost=null,selectedMedia=null,authMode='login',selectedChatUser=null,chatPoll=null,notificationPoll=null,currentFriendTab='friends',currentAlbumType=null,googleClientId='',googleInitialized=false,googlePendingCredential='';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const initials=n=>(String(n||'RV').trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase()||'RV');
@@ -203,6 +203,57 @@ async function createAlbum(type){if(!requireLogin())return;const name=prompt(`Na
 async function loadAlbumsPage(type){if(!requireLogin())return;currentAlbumType=type;hideMainPanels();$('.hero')?.classList.add('hidden');$('.composer')?.classList.add('hidden');$('.grid')?.classList.add('hidden');const page=$('#albumPage');page.classList.remove('hidden');page.innerHTML=`<div class="album-header"><div><button class="page-back" id="albumBack">← Kembali</button><h2>${type==='photo'?'🖼️ Album Foto':'🎞️ Album Video'}</h2><p class="muted">Buat album, ganti nama album, dan unggah ${type==='photo'?'foto':'video'} ke album pilihanmu.</p></div><button class="primary album-create-btn" id="createAlbumBtn">＋ Buat Album</button></div><div id="albumList" class="album-grid"><div class="loading">Memuat album...</div></div>`;$('#albumBack').onclick=()=>showView('home');$('#createAlbumBtn').onclick=()=>createAlbum(type);const d=await api('/albums?type='+type);const list=$('#albumList');list.innerHTML=(d.albums||[]).map(a=>`<article class="album-card" data-album-id="${a.id}"><div class="album-icon">${type==='photo'?'📷':'🎬'}</div><div class="album-card-main"><h3>${esc(a.name)}</h3><small>${Number(a.media_count)||0} media</small></div><div class="album-card-actions"><button class="secondary album-open-btn" data-id="${a.id}">Buka</button><button class="secondary album-rename-btn" data-id="${a.id}" data-name="${esc(a.name)}">✏️ Rename</button></div></article>`).join('')||'<div class="panel empty">Belum ada album. Buat album pertamamu.</div>';$$('.album-open-btn').forEach(b=>b.onclick=()=>openAlbum(Number(b.dataset.id),type));$$('.album-rename-btn').forEach(b=>b.onclick=()=>renameAlbum(Number(b.dataset.id),b.dataset.name,type))}
 async function renameAlbum(id,oldName,type){const name=prompt('Nama album baru:',oldName);if(name===null||!name.trim())return;try{await api(`/albums/${id}`,{method:'PUT',body:JSON.stringify({name:name.trim()})});status('Nama album berhasil diubah.');await loadAlbumsPage(type)}catch(e){status(e.message,true)}}
 async function openAlbum(id,type){if(!requireLogin())return;const page=$('#albumPage');page.innerHTML=`<button class="page-back" id="albumDetailBack">← Kembali ke Album</button><div id="albumDetail"><div class="loading">Memuat album...</div></div>`;$('#albumDetailBack').onclick=()=>loadAlbumsPage(type);try{const all=await api('/albums?type='+type);const a=(all.albums||[]).find(x=>String(x.id)===String(id));if(!a)throw new Error('Album tidak ditemukan.');const d=await api(`/albums/${id}/media`);$('#albumDetail').innerHTML=`<div class="album-detail-head"><div><h2>${type==='photo'?'🖼️':'🎞️'} ${esc(a.name)}</h2><p class="muted">${Number(a.media_count)||0} media</p></div><div><button class="secondary" id="renameAlbumDetail">✏️ Rename</button><button class="primary album-upload-btn" id="uploadAlbumBtn">＋ Unggah ${type==='photo'?'Foto':'Video'}</button><input id="albumMediaInput" type="file" accept="${type==='photo'?'image/*':'video/*'}" hidden></div></div><div class="album-media-grid">${(d.posts||[]).map(p=>p.media_type==='video'?`<video src="${esc(p.media_url)}" controls preload="metadata" class="album-media-video"></video>`:`<img src="${esc(p.media_url)}" class="album-media-photo" alt="Foto album" loading="lazy">`).join('')||'<div class="panel empty">Album ini belum memiliki media.</div>'}</div>`;$('#renameAlbumDetail').onclick=()=>renameAlbum(id,a.name,type);$('#uploadAlbumBtn').onclick=()=>$('#albumMediaInput').click();$('#albumMediaInput').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(f.size>100*1024*1024)return status('Ukuran file maksimal 100 MB.',true);try{status('Mengunggah ke album...');const fd=new FormData();fd.append('media',f);const h={};if(token())h.Authorization=`Bearer ${token()}`;const r=await fetch(API_BASE+`/albums/${id}/media`,{method:'POST',headers:h,body:fd});const x=await r.json().catch(()=>({}));if(!r.ok)throw new Error(x.error||'Upload album gagal.');status('Media berhasil ditambahkan ke album.');await openAlbum(id,type)}catch(e){status(e.message,true)}finally{e.target.value=''}}}catch(e){$('#albumDetail').innerHTML=`<div class="panel empty">${esc(e.message)}</div>`}}
+async function finishGoogleLogin(d,successText='Berhasil masuk dengan Google.'){localStorage.setItem(TOKEN_KEY,d.token);currentUser=(await api('/me')).user;updateUserUI();startNotificationPolling();$('#authModal')?.classList.remove('auth-required');close('authModal');$('#authMessage').textContent='';$('#googleCompleteWrap')?.classList.add('hidden');$('#authForm')?.classList.remove('hidden');status(successText);showView('home');await loadFeed()}
+function renderGoogleButton(){
+  const box=$('#googleSignIn');
+  if(!box||!googleInitialized||!window.google?.accounts?.id)return;
+  box.innerHTML='';
+  window.google.accounts.id.renderButton(box,{theme:'outline',size:'large',text:authMode==='register'?'signup_with':'signin_with',shape:'rectangular',logo_alignment:'left',width:360,use_fedcm_for_button:true,button_auto_select:true});
+}
+async function handleGoogleCredential(response){
+  if(!response?.credential)return;
+  try{
+    const d=await api('/auth/google',{method:'POST',body:JSON.stringify({credential:response.credential})});
+    googlePendingCredential='';
+    await finishGoogleLogin(d);
+  }catch(e){
+    try{
+      const raw=String(e.message||'');
+      if(raw.toLowerCase().includes('masukkan nomor hp')||raw.toLowerCase().includes('nomor hp satu kali')){
+        googlePendingCredential=response.credential;
+        const d=await fetch(API_BASE+'/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:response.credential})}).then(async r=>{const x=await r.json().catch(()=>({}));return {ok:r.ok,status:r.status,data:x}});
+        if(d.data?.needs_phone){
+          setAuthMode('register');
+          $('#authEmail').value=d.data.email||'';
+          $('#displayName').value=d.data.display_name||'';
+          $('#username').value=d.data.username||'';
+          $('#authForm')?.classList.add('hidden');
+          $('#googleSignIn')?.classList.add('hidden');
+          $('#googleCompleteWrap')?.classList.remove('hidden');
+          $('#authMessage').textContent='';
+          status('Masukkan nomor HP satu kali untuk menyelesaikan pendaftaran Google.',true);
+          return;
+        }
+      }
+      $('#authMessage').textContent=e.message;
+    }catch(err){$('#authMessage').textContent=err.message||e.message}
+  }
+}
+async function initGoogleAuth(){
+  try{
+    const r=await fetch(API_BASE+'/config');const cfg=await r.json().catch(()=>({}));googleClientId=cfg.google_client_id||'';
+    if(!googleClientId)return;
+    let tries=0;
+    const boot=()=>{
+      if(window.google?.accounts?.id){
+        window.google.accounts.id.initialize({client_id:googleClientId,callback:handleGoogleCredential,auto_select:true,use_fedcm_for_prompt:true});
+        googleInitialized=true;renderGoogleButton();
+        if(!currentUser)window.google.accounts.id.prompt();
+      }else if(tries++<100)setTimeout(boot,100);
+    };
+    boot();
+  }catch(e){console.warn('Google Sign-In tidak tersedia:',e)}
+}
 async function auth(e){
   e.preventDefault();
   const password=$('#authPassword').value;
@@ -230,11 +281,11 @@ function setAuthMode(m){
   $('#authIdentifierWrap')?.classList.toggle('hidden',m==='register');$('#registerContactWrap')?.classList.toggle('hidden',m==='login');
   $('#displayNameWrap')?.classList.toggle('hidden',m==='login');$('#usernameWrap')?.classList.toggle('hidden',m==='login');
   if($('#authIdentifier'))$('#authIdentifier').required=m==='login';if($('#authEmail'))$('#authEmail').required=m==='register';if($('#authPhone'))$('#authPhone').required=m==='register';
-  if($('#authSubmit'))$('#authSubmit').textContent=m==='login'?'Masuk':'Daftar';if($('#authPassword'))$('#authPassword').autocomplete=m==='login'?'current-password':'new-password';if($('#authMessage'))$('#authMessage').textContent='';
+  if($('#authSubmit'))$('#authSubmit').textContent=m==='login'?'Masuk':'Daftar';if($('#authPassword'))$('#authPassword').autocomplete=m==='login'?'current-password':'new-password';if($('#authMessage'))$('#authMessage').textContent='';if($('#googleCompleteWrap'))$('#googleCompleteWrap').classList.add('hidden');if($('#authForm'))$('#authForm').classList.remove('hidden');if($('#googleSignIn'))$('#googleSignIn').classList.remove('hidden');renderGoogleButton();
 }
 function hideMainPanels(){['profilePage','messagesPage','albumPage'].forEach(id=>$('#'+id)?.classList.add('hidden'));$('.hero')?.classList.remove('hidden');$('.composer')?.classList.remove('hidden');$('.grid')?.classList.remove('hidden');$('#friendsPanel')?.classList.add('hidden')}
 function showView(v){hideMainPanels();if(v==='home')return loadFeed();if(v==='videos'||v==='photos'){const type=v==='videos'?'video':'image';$('#feed').innerHTML=currentPosts.filter(p=>p.media_type===type).map(postCard).join('')||'<div class="panel empty">Belum ada konten.</div>';attachPostEvents();return}if(v==='creator')return loadCreator();if(v==='notifications')return loadNotifications();if(v==='messages')return openMessages();if(v==='settings')return showSettings();if(v==='friends')return showFriends('friends');if(v==='photo-albums')return loadAlbumsPage('photo');if(v==='video-albums')return loadAlbumsPage('video')}
-$('#authForm')?.addEventListener('submit',auth);$('#loginTab')?.addEventListener('click',()=>setAuthMode('login'));$('#registerTab')?.addEventListener('click',()=>setAuthMode('register'));$('#authSideBtn')?.addEventListener('click',()=>{if(currentUser){localStorage.removeItem(TOKEN_KEY);currentUser=null;stopNotificationPolling();updateUserUI();status('Anda sudah keluar.');loadFeed()}else open('authModal')});$('#profileBtn')?.addEventListener('click',()=>currentUser?showProfile(currentUser.id):open('authModal'));$('#composerInput')?.addEventListener('click',()=>createPost('text'));$('#photoBtn')?.addEventListener('click',()=>createPost('image'));$('#videoBtn')?.addEventListener('click',()=>createPost('video'));$('#chooseMedia')?.addEventListener('click',()=>$('#mediaInput')?.click());$('#monetizeBtn')?.addEventListener('click',loadCreator);$('#dashboardBtn')?.addEventListener('click',loadCreator);$('#earningsBtn')?.addEventListener('click',loadCreator);$('#notificationBtn')?.addEventListener('click',loadNotifications);$('#messageBtn')?.addEventListener('click',openMessages);
+$('#authForm')?.addEventListener('submit',auth);$('#googleCompleteBtn')?.addEventListener('click',async()=>{if(!googlePendingCredential)return;const phone=$('#googlePhone')?.value.trim();if(!phone)return $('#authMessage').textContent='Nomor HP wajib diisi.';const btn=$('#googleCompleteBtn');btn.disabled=true;try{const d=await api('/auth/google',{method:'POST',body:JSON.stringify({credential:googlePendingCredential,phone,display_name:$('#displayName').value.trim(),username:$('#username').value.trim()})});googlePendingCredential='';await finishGoogleLogin(d,'Akun berhasil dibuat dengan Google.')}catch(e){$('#authMessage').textContent=e.message}finally{btn.disabled=false}});$('#loginTab')?.addEventListener('click',()=>setAuthMode('login'));$('#registerTab')?.addEventListener('click',()=>setAuthMode('register'));$('#authSideBtn')?.addEventListener('click',()=>{if(currentUser){localStorage.removeItem(TOKEN_KEY);currentUser=null;stopNotificationPolling();updateUserUI();status('Anda sudah keluar.');loadFeed()}else open('authModal')});$('#profileBtn')?.addEventListener('click',()=>currentUser?showProfile(currentUser.id):open('authModal'));$('#composerInput')?.addEventListener('click',()=>createPost('text'));$('#photoBtn')?.addEventListener('click',()=>createPost('image'));$('#videoBtn')?.addEventListener('click',()=>createPost('video'));$('#chooseMedia')?.addEventListener('click',()=>$('#mediaInput')?.click());$('#monetizeBtn')?.addEventListener('click',loadCreator);$('#dashboardBtn')?.addEventListener('click',loadCreator);$('#earningsBtn')?.addEventListener('click',loadCreator);$('#notificationBtn')?.addEventListener('click',loadNotifications);$('#messageBtn')?.addEventListener('click',openMessages);
 function navigateView(a){if(!a)return;$$('#mainNav a,#mobileNav a').forEach(x=>x.classList.toggle('active',x.dataset.view===a.dataset.view));showView(a.dataset.view)}
 $('#mainNav')?.addEventListener('click',e=>{const a=e.target.closest('a[data-view]');if(!a)return;e.preventDefault();navigateView(a)});
 $('#mobileNav')?.addEventListener('click',e=>{const a=e.target.closest('a[data-view]');if(!a)return;e.preventDefault();navigateView(a)});
@@ -251,5 +302,6 @@ function enforceAuthGate(){
   open('authModal');
 }
 function syncMobileAuth(){const b=$('#mobileAuthBtn');if(b)b.innerHTML=currentUser?'🚪<span>Keluar</span>':'🔐<span>Masuk</span>'}
+initGoogleAuth();
 const _updateUserUI=updateUserUI;updateUserUI=function(){_updateUserUI();syncMobileAuth()};
 (async()=>{updateUserUI();await loadMe();await loadFeed();await loadEarnings();if(!currentUser)enforceAuthGate()})();

@@ -97,3 +97,5 @@ body.media-viewer-open{overflow:hidden}
 .auth-required .modal-close{display:none!important}
 .auth-required .modal-card{max-width:460px}
 .delete-post-btn{color:#b42318!important}
+
+.auth-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:#888;font-size:12px}.auth-divider:before,.auth-divider:after{content:"";height:1px;background:#eee;flex:1}.google-signin{display:flex;justify-content:center;min-height:44px}.google-complete{margin-top:14px;padding:14px;background:#f7f7f8;border:1px solid #eee;border-radius:12px}.google-complete p{font-size:13px;color:#666;line-height:1.45}.google-complete label{margin-bottom:10px}.google-complete button{margin-top:4px}

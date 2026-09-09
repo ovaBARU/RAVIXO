@@ -6,6 +6,7 @@ import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
+import {randomBytes} from 'crypto';
 
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const app=express();
@@ -31,6 +32,38 @@ function auth(req,res,next){const h=req.headers.authorization||'';if(!h.startsWi
 function optionalAuth(req,res,next){const h=req.headers.authorization||'';if(h.startsWith('Bearer ')){const payload=verifyToken(h.slice(7));if(payload)req.user=payload}next()}
 function sign(u){return jwt.sign({id:String(u.id),email:u.email,username:u.username},JWT_SECRET,{expiresIn:'7d'});}
 app.get('/health',(req,res)=>res.json({ok:true,service:'RAVIXO',time:new Date().toISOString()}));
+app.get('/api/config',(req,res)=>res.json({google_client_id:process.env.GOOGLE_CLIENT_ID||''}));
+async function verifyGoogleCredential(credential){
+  if(!process.env.GOOGLE_CLIENT_ID)throw new Error('GOOGLE_CLIENT_ID belum dikonfigurasi di Railway.');
+  const r=await fetch('https://oauth2.googleapis.com/tokeninfo?id_token='+encodeURIComponent(String(credential||'')));
+  if(!r.ok)throw new Error('Token Google tidak valid.');
+  const p=await r.json();
+  if(p.aud!==process.env.GOOGLE_CLIENT_ID)throw new Error('Token Google bukan untuk aplikasi RAVIXO.');
+  if(p.iss!=='https://accounts.google.com'&&p.iss!=='accounts.google.com')throw new Error('Penerbit token Google tidak valid.');
+  if(!p.email||p.email_verified!=='true')throw new Error('Email Google belum terverifikasi.');
+  return p;
+}
+function googleUsername(email,name){
+  const base=String(email||'').split('@')[0].toLowerCase().replace(/[^a-z0-9_]+/g,'').slice(0,20)||'ravixo';
+  return base;
+}
+app.post('/api/auth/google',async(req,res)=>{try{
+  const p=await verifyGoogleCredential(req.body.credential);
+  const email=String(p.email).toLowerCase().trim();
+  const existing=await pool.query('SELECT * FROM users WHERE lower(email)=$1',[email]);
+  if(existing.rowCount){const u=existing.rows[0];return res.json({token:sign(u),user:{id:u.id,email:u.email,phone:u.phone,display_name:u.display_name,username:u.username}})}
+  if(!req.body.phone)return res.status(409).json({needs_phone:true,email,display_name:String(p.name||email.split('@')[0]).slice(0,100),username:googleUsername(email,p.name),message:'Untuk membuat akun baru dengan Google, masukkan nomor HP satu kali.'});
+  const phone=String(req.body.phone||'').replace(/[^0-9+]/g,'');
+  if(!/^\+?[0-9]{9,15}$/.test(phone))return res.status(400).json({error:'Nomor HP tidak valid. Gunakan 9-15 digit, boleh diawali +.'});
+  const displayName=String(req.body.display_name||p.name||email.split('@')[0]).trim().slice(0,100);
+  let username=String(req.body.username||googleUsername(email,p.name)).trim().toLowerCase().replace(/[^a-z0-9_]/g,'').slice(0,30)||'ravixo';
+  const taken=await pool.query('SELECT 1 FROM users WHERE lower(username)=$1',[username]);
+  if(taken.rowCount){username=username.slice(0,24)+'_'+Math.random().toString(36).slice(2,7)}
+  const passwordHash=await bcrypt.hash(randomBytes(32).toString('hex'),12);
+  const r=await pool.query('INSERT INTO users(email,phone,password_hash,display_name,username) VALUES($1,$2,$3,$4,$5) RETURNING id,email,phone,display_name,username',[email,phone,passwordHash,displayName,username]);
+  await pool.query('INSERT INTO creators(user_id) VALUES($1)',[r.rows[0].id]);
+  return res.status(201).json({token:sign(r.rows[0]),user:r.rows[0]});
+}catch(e){console.error(e);res.status(e.message.includes('GOOGLE_CLIENT_ID')?503:400).json({error:e.message||'Login Google gagal.'})}});
 app.post('/api/auth/register',async(req,res)=>{try{const {email,phone,password,display_name,username}=req.body;const normalizedEmail=String(email||'').toLowerCase().trim();const normalizedPhone=String(phone||'').replace(/[^0-9+]/g,'');if(!normalizedEmail||!normalizedPhone||!display_name||!username||!password||password.length<8)return res.status(400).json({error:'Email, nomor HP, nama, username dan password minimal 8 karakter wajib diisi.'});if(!/^\+?[0-9]{9,15}$/.test(normalizedPhone))return res.status(400).json({error:'Nomor HP tidak valid. Gunakan 9-15 digit, boleh diawali +.'});const hash=await bcrypt.hash(password,12);const r=await pool.query('INSERT INTO users(email,phone,password_hash,display_name,username) VALUES($1,$2,$3,$4,$5) RETURNING id,email,phone,display_name,username',[normalizedEmail,normalizedPhone,hash,display_name.trim(),username.trim().toLowerCase()]);await pool.query('INSERT INTO creators(user_id) VALUES($1)',[r.rows[0].id]);res.status(201).json({token:sign(r.rows[0]),user:r.rows[0]});}catch(e){res.status(400).json({error:e.code==='23505'?(String(e.detail||'').toLowerCase().includes('phone')?'Nomor HP sudah digunakan.':'Email atau username sudah digunakan.'):'Gagal membuat akun.'});}});
 app.post('/api/auth/login',async(req,res)=>{try{const {identifier,email,phone,password}=req.body;const value=String(identifier!=null?identifier:(email||phone)||'').trim();if(!value||!password)return res.status(400).json({error:'Email atau nomor HP dan password wajib diisi.'});const looksLikeEmail=value.includes('@');const normalizedEmail=value.toLowerCase();const normalizedPhone=value.replace(/[^0-9+]/g,'');const r=looksLikeEmail?await pool.query('SELECT * FROM users WHERE lower(email)=$1',[normalizedEmail]):await pool.query('SELECT * FROM users WHERE phone=$1',[normalizedPhone]);if(!r.rowCount||!(await bcrypt.compare(password,r.rows[0].password_hash)))return res.status(401).json({error:'Email/nomor HP atau password salah.'});const u=r.rows[0];res.json({token:sign(u),user:{id:u.id,email:u.email,phone:u.phone,display_name:u.display_name,username:u.username}});}catch(e){console.error(e);res.status(500).json({error:'Server gagal memproses login.'});}});
 app.get('/api/me',auth,async(req,res)=>{const r=await pool.query('SELECT id,email,phone,display_name,username,bio,city,work,education,website,avatar_url,created_at FROM users WHERE id=$1',[req.user.id]);res.json({user:r.rows[0]});});

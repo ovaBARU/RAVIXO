@@ -43,3 +43,9 @@ The Messages menu now supports private one-to-one chat. The migration adds a `me
 - Akun yang saling mengikuti ditandai sebagai `👥 Teman`.
 - Tersedia Album Foto dan Album Video, termasuk membuat album, membuka album, mengunggah media ke album, dan rename album.
 - Video portrait tetap ditampilkan portrait di PC dengan `object-fit: contain` dan ukuran tinggi adaptif.
+
+## Google Sign-In
+RAVIXO now supports the official Google Identity Services button and One Tap. Add this Railway variable:
+- `GOOGLE_CLIENT_ID` = OAuth 2.0 Web Client ID from Google Cloud.
+
+In the Google Cloud OAuth client, add the exact RAVIXO Railway domain as an authorized JavaScript origin. Google Sign-In can automatically sign in existing Google accounts. For a brand-new RAVIXO account, Google does not provide the user's phone number to the site through standard Sign in with Google, so RAVIXO asks for the phone number once to preserve the existing rule that every new account has a phone number.

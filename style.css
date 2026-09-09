@@ -57,3 +57,15 @@
 .profile-info-grid>div{background:linear-gradient(135deg,#fff8f5,#f8f5ff);border:1px solid #f0e5e4}
 .profile-list-row,.profile-album-card{background:#ffffffdd;box-shadow:0 3px 12px #00000008}
 @media(max-width:700px){.profile-window-cover{height:135px}.profile-window-body{padding-bottom:90px}}
+
+/* Profile avatar crop & enlargement */
+.avatar-crop-card{width:min(560px,94vw);box-sizing:border-box}
+.avatar-crop-stage{position:relative;width:min(420px,82vw);aspect-ratio:1/1;margin:16px auto;background:#111;border-radius:16px;overflow:hidden;touch-action:none;display:flex;align-items:center;justify-content:center}
+.avatar-crop-stage:after{content:"";position:absolute;inset:0;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 9999px rgba(0,0,0,.38);pointer-events:none}
+.avatar-crop-stage img{position:absolute;max-width:none;user-select:none;-webkit-user-drag:none;cursor:grab;transform-origin:center center}
+.avatar-crop-stage img.dragging{cursor:grabbing}
+.avatar-crop-zoom{display:block;width:min(420px,82vw);margin:14px auto}
+.avatar-crop-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.avatar-crop-actions button{width:auto!important;margin:0}
+.avatar-crop-card h2{margin-bottom:4px}
+.profile-window-identity .profile-avatar-large.clickable-avatar{cursor:zoom-in}

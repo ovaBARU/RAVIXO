@@ -211,34 +211,21 @@ function renderGoogleButton(){
   window.google.accounts.id.renderButton(box,{theme:'outline',size:'large',text:authMode==='register'?'signup_with':'signin_with',shape:'rectangular',logo_alignment:'left',width:360});
 }
 async function handleGoogleCredential(response){
-  if(!response?.credential)return;
+  if(!response?.credential){
+    $('#authMessage').textContent='Google tidak mengirim kredensial. Silakan coba lagi.';
+    return;
+  }
   try{
     const d=await api('/auth/google',{method:'POST',body:JSON.stringify({credential:response.credential})});
     googlePendingCredential='';
-    await finishGoogleLogin(d);
+    await finishGoogleLogin(d,'Berhasil masuk dengan Google.');
   }catch(e){
-    try{
-      const raw=String(e.message||'');
-      if(raw.toLowerCase().includes('masukkan nomor hp')||raw.toLowerCase().includes('nomor hp satu kali')){
-        googlePendingCredential=response.credential;
-        const d=await fetch(API_BASE+'/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:response.credential})}).then(async r=>{const x=await r.json().catch(()=>({}));return {ok:r.ok,status:r.status,data:x}});
-        if(d.data?.needs_phone){
-          setAuthMode('register');
-          $('#authEmail').value=d.data.email||'';
-          $('#displayName').value=d.data.display_name||'';
-          $('#username').value=d.data.username||'';
-          $('#authForm')?.classList.add('hidden');
-          $('#googleSignIn')?.classList.add('hidden');
-          $('#googleCompleteWrap')?.classList.remove('hidden');
-          $('#authMessage').textContent='';
-          status('Masukkan nomor HP satu kali untuk menyelesaikan pendaftaran Google.',true);
-          return;
-        }
-      }
-      $('#authMessage').textContent=e.message;
-    }catch(err){$('#authMessage').textContent=err.message||e.message}
+    console.error('Google Sign-In error:',e);
+    $('#authMessage').textContent=e.message||'Login dengan Google gagal. Silakan coba lagi.';
+    status(e.message||'Login dengan Google gagal.',true);
   }
 }
+
 async function initGoogleAuth(){
   try{
     const r=await fetch(API_BASE+'/config');const cfg=await r.json().catch(()=>({}));googleClientId=cfg.google_client_id||'';
@@ -246,8 +233,10 @@ async function initGoogleAuth(){
     let tries=0;
     const boot=()=>{
       if(window.google?.accounts?.id){
-        window.google.accounts.id.initialize({client_id:googleClientId,callback:handleGoogleCredential});
-        googleInitialized=true;renderGoogleButton();
+        window.google.accounts.id.initialize({client_id:googleClientId,callback:handleGoogleCredential,cancel_on_tap_outside:false});
+        googleInitialized=true;
+        renderGoogleButton();
+        try{window.google.accounts.id.prompt();}catch(e){console.warn('Google One Tap prompt gagal:',e)}
       }else if(tries++<100)setTimeout(boot,100);
     };
     boot();

@@ -32,3 +32,6 @@ Environment variables:
 ## Media
 
 Uploaded media is stored under `uploads/`. Railway service storage can be ephemeral, so production deployments should eventually move media to object storage such as S3/R2/Supabase Storage.
+
+### Private chat
+The Messages menu now supports private one-to-one chat. The migration adds a `messages` table automatically, and the server exposes user search plus message send/read endpoints.

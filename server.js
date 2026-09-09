@@ -10,7 +10,8 @@ import multer from 'multer';
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const app=express();
 const PORT=process.env.PORT||3000;
-const JWT_SECRET=process.env.JWT_SECRET||'change-me-in-railway';
+const JWT_SECRET=process.env.JWT_SECRET||'ravixo-production-stable-secret-v1';
+const JWT_LEGACY_SECRET='change-me-in-railway';
 const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.DATABASE_URL?{rejectUnauthorized:false}:false});
 app.use(express.json({limit:'2mb'}));
 app.use(express.urlencoded({extended:true}));
@@ -25,8 +26,9 @@ async function init(){
   await pool.query(schema);
 }
 
-function auth(req,res,next){const h=req.headers.authorization||'';if(!h.startsWith('Bearer '))return res.status(401).json({error:'Login diperlukan.'});try{req.user=jwt.verify(h.slice(7),JWT_SECRET);next();}catch{return res.status(401).json({error:'Sesi tidak valid atau sudah kedaluwarsa.'});}}
-function optionalAuth(req,res,next){const h=req.headers.authorization||'';if(h.startsWith('Bearer ')){try{req.user=jwt.verify(h.slice(7),JWT_SECRET)}catch{}}next()}
+function verifyToken(raw){try{return jwt.verify(raw,JWT_SECRET)}catch{try{return jwt.verify(raw,JWT_LEGACY_SECRET)}catch{return null}}}
+function auth(req,res,next){const h=req.headers.authorization||'';if(!h.startsWith('Bearer '))return res.status(401).json({error:'Login diperlukan.'});const payload=verifyToken(h.slice(7));if(!payload)return res.status(401).json({error:'Sesi tidak valid atau sudah kedaluwarsa.'});req.user=payload;next()}
+function optionalAuth(req,res,next){const h=req.headers.authorization||'';if(h.startsWith('Bearer ')){const payload=verifyToken(h.slice(7));if(payload)req.user=payload}next()}
 function sign(u){return jwt.sign({id:String(u.id),email:u.email,username:u.username},JWT_SECRET,{expiresIn:'7d'});}
 app.get('/health',(req,res)=>res.json({ok:true,service:'RAVIXO',time:new Date().toISOString()}));
 app.post('/api/auth/register',async(req,res)=>{try{const {email,password,display_name,username}=req.body;if(!email||!password||!display_name||!username||password.length<8)return res.status(400).json({error:'Email, nama, username dan password minimal 8 karakter wajib diisi.'});const hash=await bcrypt.hash(password,12);const r=await pool.query('INSERT INTO users(email,password_hash,display_name,username) VALUES($1,$2,$3,$4) RETURNING id,email,display_name,username',[email.toLowerCase().trim(),hash,display_name.trim(),username.trim().toLowerCase()]);await pool.query('INSERT INTO creators(user_id) VALUES($1)',[r.rows[0].id]);res.status(201).json({token:sign(r.rows[0]),user:r.rows[0]});}catch(e){res.status(400).json({error:e.code==='23505'?'Email atau username sudah digunakan.':'Gagal membuat akun.'});}});

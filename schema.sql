@@ -10,3 +10,7 @@ CREATE INDEX IF NOT EXISTS messages_sender_receiver_idx ON messages(sender_id,re
 CREATE INDEX IF NOT EXISTS messages_receiver_sender_idx ON messages(receiver_id,sender_id,created_at);
 CREATE TABLE IF NOT EXISTS creators(user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,balance NUMERIC(14,2) DEFAULT 0,pending_balance NUMERIC(14,2) DEFAULT 0,lifetime_earnings NUMERIC(14,2) DEFAULT 0,created_at TIMESTAMPTZ DEFAULT now());
 CREATE TABLE IF NOT EXISTS payouts(id BIGSERIAL PRIMARY KEY,user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,amount NUMERIC(14,2) NOT NULL,status TEXT DEFAULT 'pending',created_at TIMESTAMPTZ DEFAULT now());
+
+CREATE TABLE IF NOT EXISTS follows(follower_id BIGINT REFERENCES users(id) ON DELETE CASCADE,following_id BIGINT REFERENCES users(id) ON DELETE CASCADE,created_at TIMESTAMPTZ DEFAULT now(),PRIMARY KEY(follower_id,following_id),CHECK(follower_id<>following_id));
+CREATE INDEX IF NOT EXISTS follows_following_idx ON follows(following_id,created_at);
+CREATE INDEX IF NOT EXISTS follows_follower_idx ON follows(follower_id,created_at);

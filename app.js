@@ -18,7 +18,27 @@ async function loadMe(){if(!token()){updateUserUI();stopNotificationPolling();re
 function mediaHTML(p){if(!p.media_url)return '<div class="media brandmedia"><b>RAVIXO</b><small>Share your story. Build your audience.</small></div>';const url=esc(p.media_url);return p.media_type==='video'?`<video class="media realmedia portrait-friendly-video" src="${url}" controls preload="metadata"></video>`:`<img class="media realmedia" src="${url}" alt="Media postingan" loading="lazy">`}
 function openMediaViewer(url,type='image',caption=''){const viewer=$('#mediaViewer'),stage=$('#mediaViewerStage'),cap=$('#mediaViewerCaption');if(!viewer||!stage)return;stage.innerHTML=type==='video'?`<video src="${esc(url)}" controls autoplay playsinline></video>`:`<img src="${esc(url)}" alt="Media diperbesar">`;cap.textContent=caption||'';viewer.classList.remove('hidden');viewer.setAttribute('aria-hidden','false');document.body.classList.add('media-viewer-open')}
 function closeMediaViewer(){const viewer=$('#mediaViewer'),stage=$('#mediaViewerStage');if(!viewer)return;viewer.classList.add('hidden');viewer.setAttribute('aria-hidden','true');if(stage)stage.innerHTML='';document.body.classList.remove('media-viewer-open')}
-function attachMediaViewer(){ $$('.realmedia,.album-media-photo,.album-media-video').forEach(el=>{if(el.dataset.viewerBound)return;el.dataset.viewerBound='1';el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openMediaViewer(el.currentSrc||el.src,el.tagName==='VIDEO'?'video':'image',el.alt||'')})}); $$('.profile-avatar-large,.settings-avatar').forEach(el=>{if(el.dataset.viewerBound)return;const img=el.querySelector('img')||el;if(!img?.src)return;el.dataset.viewerBound='1';el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openMediaViewer(img.currentSrc||img.src,'image','Foto profil')})});}
+function attachMediaViewer(){
+  $$('.realmedia,.album-media-photo,.album-media-video').forEach(el=>{
+    if(el.dataset.viewerBound)return;
+    el.dataset.viewerBound='1';
+    el.addEventListener('click',e=>{
+      e.preventDefault();e.stopPropagation();
+      openMediaViewer(el.currentSrc||el.src,el.tagName==='VIDEO'?'video':'image',el.alt||'')
+    })
+  });
+  $$('.profile-avatar-large,.settings-avatar').forEach(el=>{
+    if(el.dataset.viewerBound)return;
+    const img=el.querySelector('img')||el;
+    if(!img?.src)return;
+    el.dataset.viewerBound='1';
+    el.addEventListener('click',e=>{
+      e.preventDefault();e.stopPropagation();
+      openMediaViewer(img.currentSrc||img.src,'image','Foto profil')
+    })
+  });
+}
+
 function postCard(p){const liked=!!p.liked,isMine=currentUser&&String(currentUser.id)===String(p.user_id);return `<article class="post" data-post-id="${esc(p.id)}"><div class="head">${avatarHTML({display_name:p.display_name,username:p.username,avatar_url:p.avatar_url})}<div><b class="clickable-user" data-profile-id="${esc(p.user_id)}">${esc(p.display_name||p.username||'Pengguna RAVIXO')}</b><small>@${esc(p.username||'')} · ${new Date(p.created_at).toLocaleString('id-ID')} · 🌎 Publik</small></div>${!isMine&&currentUser?`<button class="follow-btn ${p.is_following?'following':''}" data-user-id="${esc(p.user_id)}" data-following="${p.is_following?'1':'0'}">${p.is_following&&p.is_followed_by?'👥 Teman':p.is_following?'✓ Mengikuti':'+ Ikuti'}</button>`:''}</div><p>${esc(p.caption||'')}</p>${mediaHTML(p)}<div class="stats">❤️ ${Number(p.likes_count)||0}　 💬 ${Number(p.comments_count)||0} komentar　 ↗ ${Number(p.shares_count)||0} dibagikan　 👁 ${Number(p.views_count)||0}</div><div class="actions"><button class="like-btn" data-id="${esc(p.id)}">${liked?'❤️ Disukai':'❤️ Suka'}</button><button class="comment-btn" data-id="${esc(p.id)}">💬 Komentar</button><button class="share-btn" data-id="${esc(p.id)}">↗ Bagikan</button></div></article>`}
 async function loadFeed(q=''){const feed=$('#feed');feed.innerHTML='<div class="loading">Memuat feed RAVIXO...</div>';try{const d=await api('/posts?limit=50'+(q?'&q='+encodeURIComponent(q):''));currentPosts=d.posts||[];feed.innerHTML=currentPosts.length?currentPosts.map(postCard).join(''):'<div class="panel empty">Belum ada postingan.</div>';attachPostEvents();attachMediaViewer()}catch(e){feed.innerHTML='<div class="panel empty">Feed gagal dimuat.</div>';status(e.message,true)}}
 function attachPostEvents(){$$('.like-btn').forEach(b=>b.onclick=()=>likePost(b.dataset.id,b));$$('.comment-btn').forEach(b=>b.onclick=()=>showComments(b.dataset.id));$$('.share-btn').forEach(b=>b.onclick=()=>sharePost(b.dataset.id));$$('.follow-btn').forEach(b=>b.onclick=()=>toggleFollow(b.dataset.userId,b));$$('.clickable-user,.clickable-avatar').forEach(b=>b.onclick=()=>showProfile(Number(b.dataset.profileId)));const seen=new Set();const obs='IntersectionObserver'in window?new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){const id=x.target.dataset.postId;if(!seen.has(id)){seen.add(id);api(`/posts/${id}/view`,{method:'POST'}).catch(()=>{})}}}),{threshold:.5}):null;$$('.post').forEach(c=>obs?.observe(c))}
@@ -83,8 +103,54 @@ function personRow(u,mode=''){return `<div class="friend-card">${avatarHTML(u)}<
 async function loadFriends(tab=currentFriendTab,q=''){if(!requireLogin())return;currentFriendTab=tab;$$('.friends-tab').forEach(x=>x.classList.toggle('active',x.dataset.friendTab===tab));const list=$('#friendsList');list.innerHTML='<div class="loading">Memuat daftar...</div>';try{let d;if(tab==='discover'){d=await api('/users/search?q='+encodeURIComponent(q));list.innerHTML=(d.users||[]).map(u=>personRow(u,'discover')).join('')||'<p class="muted">Pengguna tidak ditemukan.</p>'}else{d=await api(`/users/${currentUser.id}/${tab}`);list.innerHTML=(d.users||[]).map(u=>personRow(u,tab)).join('')||`<p class="muted">Belum ada ${tab==='friends'?'teman':tab==='following'?'akun yang kamu ikuti':'pengikut'}.</p>`}$$('#friendsList .clickable-user').forEach(b=>b.onclick=()=>showProfile(Number(b.dataset.profileId)));$$('#friendsList .follow-btn').forEach(b=>b.onclick=()=>toggleFollow(b.dataset.userId,b))}catch(e){list.innerHTML=`<p class="muted">${esc(e.message)}</p>`}}
 async function showFriends(tab='friends'){if(!requireLogin())return;hideMainPanels();$('#friendsPanel').classList.remove('hidden');$('#friendSearch').value='';$('#friendSearch').classList.toggle('hidden',tab!=='discover');await loadFriends(tab)}
 async function showComments(id){selectedPost=id;open('commentModal');$('#commentContent').innerHTML='<div class="loading">Memuat komentar...</div>';try{const d=await api(`/posts/${id}/comments`);$('#commentContent').innerHTML=(d.comments||[]).map(c=>`<div class="comment"><b>${esc(c.display_name||c.username)}</b><p>${esc(c.body)}</p><small>${new Date(c.created_at).toLocaleString('id-ID')}</small></div>`).join('')||'<p class="muted">Belum ada komentar.</p>'}catch(e){$('#commentContent').innerHTML=`<p>${esc(e.message)}</p>`}}
-async function createPost(kind='text'){if(!requireLogin())return;selectedMedia=null;$('#captionInput').value='';$('#mediaPreview').innerHTML='';$('#composeTitle').textContent=kind==='text'?'Buat postingan':kind==='image'?'Tambah foto':'Tambah video';open('composeModal');if(kind!=='text'){$('#mediaInput').accept=kind==='image'?'image/*':'video/*';$('#mediaInput').click()}}
-async function uploadMedia(file){const fd=new FormData();fd.append('media',file);const h={};if(token())h.Authorization=`Bearer ${token()}`;const r=await fetch(API_BASE+'/upload',{method:'POST',headers:h,body:fd});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Upload gagal.');return d}
+async function createPost(kind='text'){
+  if(!requireLogin())return;
+  selectedMedia=null;
+  const cap=$('#captionInput'),preview=$('#mediaPreview'),title=$('#composeTitle'),input=$('#mediaInput');
+  if(cap)cap.value='';
+  if(preview)preview.innerHTML='';
+  if(title)title.textContent=kind==='text'?'Buat postingan':kind==='image'?'Tambah foto':'Tambah video';
+  if(input){input.value='';input.accept=kind==='image'?'image/*':kind==='video'?'video/*':'image/*,video/*';input.dataset.postKind=kind;}
+  open('composeModal');
+  if(kind!=='text')requestAnimationFrame(()=>input?.click());
+}
+async function uploadMedia(file){
+  const fd=new FormData();fd.append('media',file);
+  const h={};if(token())h.Authorization=`Bearer ${token()}`;
+  const r=await fetch(API_BASE+'/upload',{method:'POST',headers:h,body:fd});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||'Upload gagal.');
+  return d;
+}
+async function publishPost(e){
+  e.preventDefault();
+  if(!requireLogin())return;
+  const btn=$('#composeForm button.primary'),caption=$('#captionInput')?.value.trim()||'';
+  if(!caption&&!selectedMedia)return status('Tulis teks atau pilih foto/video terlebih dahulu.',true);
+  if(btn)btn.disabled=true;
+  try{
+    let media_url=null,media_type=null;
+    if(selectedMedia){
+      status('Mengunggah media...');
+      const up=await uploadMedia(selectedMedia);
+      media_url=up.url;media_type=up.media_type;
+    }
+    await api('/posts',{method:'POST',body:JSON.stringify({caption,media_url,media_type,visibility:'public'})});
+    close('composeModal');
+    selectedMedia=null;
+    const input=$('#mediaInput');if(input)input.value='';
+    status('Postingan berhasil dipublikasikan.');
+    await loadFeed();
+  }catch(err){status(err.message,true)}finally{if(btn)btn.disabled=false}
+}
+function previewSelectedMedia(file){
+  const box=$('#mediaPreview');if(!box)return;
+  if(!file){box.innerHTML='';return}
+  const url=URL.createObjectURL(file);
+  box.innerHTML=file.type.startsWith('video/')
+    ? `<video src="${esc(url)}" controls playsinline></video>`
+    : `<img src="${esc(url)}" alt="Pratinjau media">`;
+}
 let avatarCrop={file:null,img:null,scale:1,x:0,y:0,drag:false,sx:0,sy:0,ox:0,oy:0};
 function positionAvatarCrop(){
   const stage=$('#avatarCropStage'),img=$('#avatarCropImage'); if(!stage||!img||!avatarCrop.img)return;
@@ -174,7 +240,7 @@ $$('[data-friend-tab]').forEach(b=>b.onclick=()=>loadFriends(b.dataset.friendTab
 $$('[data-close]').forEach(b=>b.onclick=()=>{if(b.dataset.close==='messageModal')stopChatPolling();close(b.dataset.close)});$$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m){if(m.id==='messageModal')stopChatPolling();m.classList.add('hidden')}}));
 $('#searchInput')?.addEventListener('input',e=>{const m=$('#mobileSearchInput');if(m)m.value=e.target.value;loadFeed(e.target.value.trim())});
 $('#mobileSearchInput')?.addEventListener('input',e=>{const d=e.target.value.trim();$('#searchInput').value=e.target.value;loadFeed(d)});$('#friendSearch')?.addEventListener('input',e=>{if(currentFriendTab==='discover')loadFriends('discover',e.target.value.trim())});
-$('#changeAvatarBtn').onclick=()=>$('#avatarInput').click();$('#avatarInput').onchange=e=>{const f=e.target.files[0];if(f)uploadAvatar(f);e.target.value=''};$('#avatarCropCancel').onclick=closeAvatarCrop;$('#avatarCropReset').onclick=resetAvatarCrop;$('#avatarCropSave').onclick=saveCroppedAvatar;$('#avatarCropZoom').oninput=e=>{avatarCrop.scale=Number(e.target.value)||1;positionAvatarCrop()};$('#avatarCropStage').addEventListener('pointerdown',e=>{if(!avatarCrop.img)return;avatarCrop.drag=true;avatarCrop.sx=e.clientX;avatarCrop.sy=e.clientY;avatarCrop.ox=avatarCrop.x;avatarCrop.oy=avatarCrop.y;$('#avatarCropImage').classList.add('dragging');e.currentTarget.setPointerCapture?.(e.pointerId)});$('#avatarCropStage').addEventListener('pointermove',e=>{if(!avatarCrop.drag)return;avatarCrop.x=avatarCrop.ox+(e.clientX-avatarCrop.sx);avatarCrop.y=avatarCrop.oy+(e.clientY-avatarCrop.sy);positionAvatarCrop()});['pointerup','pointercancel','pointerleave'].forEach(ev=>$('#avatarCropStage').addEventListener(ev,()=>{avatarCrop.drag=false;$('#avatarCropImage').classList.remove('dragging')}));
+$('#mediaViewerClose')?.addEventListener('click',closeMediaViewer);$('#mediaViewer')?.addEventListener('click',e=>{if(e.target.id==='mediaViewer')closeMediaViewer()});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeMediaViewer();['authModal','creatorModal','profileModal','notificationModal','commentModal','composeModal','messageModal','settingsModal','avatarCropModal'].forEach(id=>close(id))}});$('#composeForm')?.addEventListener('submit',publishPost);$('#mediaInput')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(!f){selectedMedia=null;previewSelectedMedia(null);return}if(f.size>100*1024*1024){e.target.value='';selectedMedia=null;previewSelectedMedia(null);return status('Ukuran file maksimal 100 MB.',true)}selectedMedia=f;previewSelectedMedia(f)});$('#changeAvatarBtn').onclick=()=>$('#avatarInput').click();$('#avatarInput').onchange=e=>{const f=e.target.files[0];if(f)uploadAvatar(f);e.target.value=''};$('#avatarCropCancel').onclick=closeAvatarCrop;$('#avatarCropReset').onclick=resetAvatarCrop;$('#avatarCropSave').onclick=saveCroppedAvatar;$('#avatarCropZoom').oninput=e=>{avatarCrop.scale=Number(e.target.value)||1;positionAvatarCrop()};$('#avatarCropStage').addEventListener('pointerdown',e=>{if(!avatarCrop.img)return;avatarCrop.drag=true;avatarCrop.sx=e.clientX;avatarCrop.sy=e.clientY;avatarCrop.ox=avatarCrop.x;avatarCrop.oy=avatarCrop.y;$('#avatarCropImage').classList.add('dragging');e.currentTarget.setPointerCapture?.(e.pointerId)});$('#avatarCropStage').addEventListener('pointermove',e=>{if(!avatarCrop.drag)return;avatarCrop.x=avatarCrop.ox+(e.clientX-avatarCrop.sx);avatarCrop.y=avatarCrop.oy+(e.clientY-avatarCrop.sy);positionAvatarCrop()});['pointerup','pointercancel','pointerleave'].forEach(ev=>$('#avatarCropStage').addEventListener(ev,()=>{avatarCrop.drag=false;$('#avatarCropImage').classList.remove('dragging')}));
 $('#saveSettings').onclick=async()=>{if(!requireLogin())return;const btn=$('#saveSettings');btn.disabled=true;$('#settingsMessage').textContent='Menyimpan profil...';try{const d=await api('/me',{method:'PUT',body:JSON.stringify({display_name:$('#settingsName').value.trim(),username:$('#settingsUsername').value.trim(),bio:$('#settingsBio').value.trim(),city:$('#settingsCity').value.trim(),work:$('#settingsWork').value.trim(),education:$('#settingsEducation').value.trim(),website:$('#settingsWebsite').value.trim()})});currentUser=d.user;updateUserUI();renderSettingsAvatar();$('#settingsMessage').textContent='Profil berhasil disimpan.';status('Profil berhasil diperbarui.')}catch(e){$('#settingsMessage').textContent=e.message;status(e.message,true)}finally{btn.disabled=false}};
 function syncMobileAuth(){const b=$('#mobileAuthBtn');if(b)b.innerHTML=currentUser?'🚪<span>Keluar</span>':'🔐<span>Masuk</span>'}
 const _updateUserUI=updateUserUI;updateUserUI=function(){_updateUserUI();syncMobileAuth()};

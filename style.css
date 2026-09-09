@@ -87,3 +87,7 @@ body.media-viewer-open{overflow:hidden}
   .media-viewer-close{right:12px;top:10px;width:42px;height:42px;font-size:29px}
   .media-viewer-caption{bottom:8px;max-width:92vw}
 }
+
+/* Defensive interaction fix */
+.hidden{display:none!important;pointer-events:none!important}.modal.hidden,.media-viewer.hidden{display:none!important;pointer-events:none!important}
+.modal:not(.hidden),.media-viewer:not(.hidden){pointer-events:auto}

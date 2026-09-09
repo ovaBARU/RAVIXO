@@ -91,3 +91,9 @@ body.media-viewer-open{overflow:hidden}
 /* Defensive interaction fix */
 .hidden{display:none!important;pointer-events:none!important}.modal.hidden,.media-viewer.hidden{display:none!important;pointer-events:none!important}
 .modal:not(.hidden),.media-viewer:not(.hidden){pointer-events:auto}
+
+/* Authentication gate: visitors must log in or register before using RAVIXO. */
+.auth-required{z-index:10020!important}
+.auth-required .modal-close{display:none!important}
+.auth-required .modal-card{max-width:460px}
+.delete-post-btn{color:#b42318!important}

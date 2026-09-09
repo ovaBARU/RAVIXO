@@ -35,3 +35,11 @@ Uploaded media is stored under `uploads/`. Railway service storage can be epheme
 
 ### Private chat
 The Messages menu now supports private one-to-one chat. The migration adds a `messages` table automatically, and the server exposes user search plus message send/read endpoints.
+
+## Fitur terbaru
+- Setiap akun dapat mengunggah dan mengganti foto profil dari Pengaturan.
+- Foto profil tampil di header, sidebar, feed, daftar teman, pesan, dan profil.
+- Menu Teman memiliki tab Teman, Mengikuti, Pengikut, dan Cari Pengguna.
+- Akun yang saling mengikuti ditandai sebagai `👥 Teman`.
+- Tersedia Album Foto dan Album Video, termasuk membuat album, membuka album, mengunggah media ke album, dan rename album.
+- Video portrait tetap ditampilkan portrait di PC dengan `object-fit: contain` dan ukuran tinggi adaptif.

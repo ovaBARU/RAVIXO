@@ -4,7 +4,8 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS city TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS work TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS education TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS website TEXT;
-CREATE TABLE IF NOT EXISTS posts(id BIGSERIAL PRIMARY KEY,user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,caption TEXT NOT NULL DEFAULT '',visibility TEXT NOT NULL DEFAULT 'public',media_url TEXT,media_type TEXT,created_at TIMESTAMPTZ DEFAULT now());
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+CREATE TABLE IF NOT EXISTS posts(id BIGSERIAL PRIMARY KEY,user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,caption TEXT NOT NULL DEFAULT '',visibility TEXT NOT NULL DEFAULT 'public',media_url TEXT,media_type TEXT,album_id BIGINT,created_at TIMESTAMPTZ DEFAULT now());
 CREATE TABLE IF NOT EXISTS likes(user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,post_id BIGINT REFERENCES posts(id) ON DELETE CASCADE,created_at TIMESTAMPTZ DEFAULT now(),PRIMARY KEY(user_id,post_id));
 CREATE TABLE IF NOT EXISTS comments(id BIGSERIAL PRIMARY KEY,user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,post_id BIGINT REFERENCES posts(id) ON DELETE CASCADE,body TEXT NOT NULL,created_at TIMESTAMPTZ DEFAULT now());
 CREATE TABLE IF NOT EXISTS shares(id BIGSERIAL PRIMARY KEY,user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,post_id BIGINT REFERENCES posts(id) ON DELETE CASCADE,share_type TEXT DEFAULT 'internal',created_at TIMESTAMPTZ DEFAULT now());
@@ -19,3 +20,15 @@ CREATE TABLE IF NOT EXISTS payouts(id BIGSERIAL PRIMARY KEY,user_id BIGINT REFER
 CREATE TABLE IF NOT EXISTS follows(follower_id BIGINT REFERENCES users(id) ON DELETE CASCADE,following_id BIGINT REFERENCES users(id) ON DELETE CASCADE,created_at TIMESTAMPTZ DEFAULT now(),PRIMARY KEY(follower_id,following_id),CHECK(follower_id<>following_id));
 CREATE INDEX IF NOT EXISTS follows_following_idx ON follows(following_id,created_at);
 CREATE INDEX IF NOT EXISTS follows_follower_idx ON follows(follower_id,created_at);
+
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS album_id BIGINT;
+CREATE TABLE IF NOT EXISTS albums(
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  album_type TEXT NOT NULL CHECK(album_type IN ('photo','video')),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS albums_user_type_idx ON albums(user_id,album_type,created_at);
+CREATE INDEX IF NOT EXISTS posts_album_idx ON posts(album_id,created_at);

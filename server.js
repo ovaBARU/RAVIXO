@@ -1,0 +1,49 @@
+import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import {fileURLToPath} from 'url';
+import pg from 'pg';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import multer from 'multer';
+
+const __dirname=path.dirname(fileURLToPath(import.meta.url));
+const app=express();
+const PORT=process.env.PORT||3000;
+const JWT_SECRET=process.env.JWT_SECRET||'change-me-in-railway';
+const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.DATABASE_URL?{rejectUnauthorized:false}:false});
+app.use(express.json({limit:'2mb'}));
+app.use(express.urlencoded({extended:true}));
+const uploads=path.join(__dirname,'uploads'); fs.mkdirSync(uploads,{recursive:true});
+const storage=multer.diskStorage({destination:uploads,filename:(r,f,cb)=>cb(null,`${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(f.originalname)}`)});
+const upload=multer({storage,limits:{fileSize:100*1024*1024},fileFilter:(r,f,cb)=>cb(null,/^(image|video)\//.test(f.mimetype))});
+app.use('/uploads',express.static(uploads));
+
+async function init(){
+  if(!process.env.DATABASE_URL){throw new Error('DATABASE_URL belum dikonfigurasi. Tambahkan PostgreSQL di Railway.');}
+  const schema=fs.readFileSync(new URL('./schema.sql',import.meta.url),'utf8');
+  await pool.query(schema);
+}
+
+function auth(req,res,next){const h=req.headers.authorization||'';if(!h.startsWith('Bearer '))return res.status(401).json({error:'Login diperlukan.'});try{req.user=jwt.verify(h.slice(7),JWT_SECRET);next();}catch{return res.status(401).json({error:'Sesi tidak valid atau sudah kedaluwarsa.'});}}
+function sign(u){return jwt.sign({id:String(u.id),email:u.email,username:u.username},JWT_SECRET,{expiresIn:'7d'});}
+app.get('/health',(req,res)=>res.json({ok:true,service:'RAVIXO',time:new Date().toISOString()}));
+app.post('/api/auth/register',async(req,res)=>{try{const {email,password,display_name,username}=req.body;if(!email||!password||!display_name||!username||password.length<8)return res.status(400).json({error:'Email, nama, username dan password minimal 8 karakter wajib diisi.'});const hash=await bcrypt.hash(password,12);const r=await pool.query('INSERT INTO users(email,password_hash,display_name,username) VALUES($1,$2,$3,$4) RETURNING id,email,display_name,username',[email.toLowerCase().trim(),hash,display_name.trim(),username.trim().toLowerCase()]);await pool.query('INSERT INTO creators(user_id) VALUES($1)',[r.rows[0].id]);res.status(201).json({token:sign(r.rows[0]),user:r.rows[0]});}catch(e){res.status(400).json({error:e.code==='23505'?'Email atau username sudah digunakan.':'Gagal membuat akun.'});}});
+app.post('/api/auth/login',async(req,res)=>{try{const {email,password}=req.body;const r=await pool.query('SELECT * FROM users WHERE email=$1',[String(email||'').toLowerCase().trim()]);if(!r.rowCount||!(await bcrypt.compare(password||'',r.rows[0].password_hash)))return res.status(401).json({error:'Email atau password salah.'});const u=r.rows[0];res.json({token:sign(u),user:{id:u.id,email:u.email,display_name:u.display_name,username:u.username}});}catch{res.status(500).json({error:'Server gagal memproses login.'});}});
+app.get('/api/me',auth,async(req,res)=>{const r=await pool.query('SELECT id,email,display_name,username,created_at FROM users WHERE id=$1',[req.user.id]);res.json({user:r.rows[0]});});
+app.get('/api/posts',async(req,res)=>{try{const limit=Math.min(Number(req.query.limit)||20,50),q=String(req.query.q||'').trim();const r=await pool.query(`SELECT p.*,u.display_name,u.username,(SELECT count(*) FROM likes l WHERE l.post_id=p.id) likes_count,(SELECT count(*) FROM comments c WHERE c.post_id=p.id) comments_count,(SELECT count(*) FROM shares s WHERE s.post_id=p.id) shares_count,(SELECT count(*) FROM views v WHERE v.post_id=p.id) views_count FROM posts p JOIN users u ON u.id=p.user_id WHERE p.visibility='public' AND ($2='' OR p.caption ILIKE '%'||$2||'%' OR u.username ILIKE '%'||$2||'%') ORDER BY p.created_at DESC LIMIT $1`,[limit,q]);let posts=r.rows;if(req.user){}res.json({posts});}catch(e){res.status(500).json({error:'Feed gagal dimuat.'});}});
+app.post('/api/posts',auth,async(req,res)=>{const {caption='',visibility='public',media_url=null,media_type=null}=req.body;if(!String(caption).trim()&&!media_url)return res.status(400).json({error:'Postingan harus memiliki teks atau media.'});const r=await pool.query('INSERT INTO posts(user_id,caption,visibility,media_url,media_type) VALUES($1,$2,$3,$4,$5) RETURNING *',[req.user.id,String(caption).trim(),visibility,media_url,media_type]);res.status(201).json({post:r.rows[0]});});
+app.post('/api/upload',auth,upload.single('media'),(req,res)=>{if(!req.file)return res.status(400).json({error:'File foto/video tidak valid.'});const type=req.file.mimetype.startsWith('video/')?'video':'image';res.status(201).json({url:`/uploads/${req.file.filename}`,media_type:type});});
+app.post('/api/posts/:id/like',auth,async(req,res)=>{await pool.query('INSERT INTO likes(user_id,post_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[req.user.id,req.params.id]);res.json({ok:true});});
+app.delete('/api/posts/:id/like',auth,async(req,res)=>{await pool.query('DELETE FROM likes WHERE user_id=$1 AND post_id=$2',[req.user.id,req.params.id]);res.json({ok:true});});
+app.get('/api/posts/:id/comments',async(req,res)=>{const r=await pool.query('SELECT c.*,u.display_name,u.username FROM comments c JOIN users u ON u.id=c.user_id WHERE c.post_id=$1 ORDER BY c.created_at ASC',[req.params.id]);res.json({comments:r.rows});});
+app.post('/api/posts/:id/comments',auth,async(req,res)=>{const body=String(req.body.body||'').trim();if(!body)return res.status(400).json({error:'Komentar kosong.'});const r=await pool.query('INSERT INTO comments(user_id,post_id,body) VALUES($1,$2,$3) RETURNING *',[req.user.id,req.params.id,body]);res.status(201).json({comment:r.rows[0]});});
+app.post('/api/posts/:id/share',auth,async(req,res)=>{await pool.query('INSERT INTO shares(user_id,post_id,share_type) VALUES($1,$2,$3)',[req.user.id,req.params.id,req.body.share_type||'internal']);res.json({ok:true});});
+app.post('/api/posts/:id/view',auth,async(req,res)=>{await pool.query('INSERT INTO views(user_id,post_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[req.user.id,req.params.id]);res.json({ok:true});});
+app.get('/api/notifications',auth,async(req,res)=>{const r=await pool.query('SELECT * FROM notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50',[req.user.id]);res.json({notifications:r.rows});});
+app.get('/api/creator/dashboard',auth,async(req,res)=>{const r=await pool.query('SELECT * FROM creators WHERE user_id=$1',[req.user.id]);res.json({creator:r.rows[0]||null});});
+app.post('/api/creator/payouts',auth,async(req,res)=>{const amount=Number(req.body.amount);if(!Number.isFinite(amount)||amount<=0)return res.status(400).json({error:'Jumlah pencairan tidak valid.'});const client=await pool.connect();try{await client.query('BEGIN');const c=await client.query('SELECT balance FROM creators WHERE user_id=$1 FOR UPDATE',[req.user.id]);if(!c.rowCount||amount>Number(c.rows[0].balance)){await client.query('ROLLBACK');return res.status(400).json({error:'Saldo tidak mencukupi.'});}await client.query('UPDATE creators SET balance=balance-$1,pending_balance=pending_balance+$1 WHERE user_id=$2',[amount,req.user.id]);const p=await client.query('INSERT INTO payouts(user_id,amount) VALUES($1,$2) RETURNING *',[req.user.id,amount]);await client.query('COMMIT');res.status(201).json({payout:p.rows[0]});}catch(e){await client.query('ROLLBACK');res.status(500).json({error:'Pencairan gagal diproses.'});}finally{client.release();}});
+app.get('/api/search',async(req,res)=>{req.url='/api/posts?limit=50&q='+encodeURIComponent(req.query.q||'');return app._router.handle(req,res,()=>{});});
+app.use(express.static(__dirname));
+app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'index.html')));
+init().then(()=>app.listen(PORT,()=>console.log(`RAVIXO running on ${PORT}`))).catch(e=>{console.error(e);process.exit(1)});

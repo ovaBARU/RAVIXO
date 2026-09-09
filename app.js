@@ -48,28 +48,28 @@ async function sharePost(id){if(!requireLogin())return;try{await api(`/posts/${i
 function followLabel(u){return u.is_following&&u.is_followed_by?'👥 Teman':u.is_following?'✓ Mengikuti':'+ Ikuti'}
 function followClass(u){return u.is_following?'following':''}
 async function toggleFollow(userId,b){if(!requireLogin())return;const following=b.dataset.following==='1';b.disabled=true;try{await api(`/users/${userId}/follow`,{method:following?'DELETE':'POST'});const fresh=(await api(`/users/${userId}`)).user;b.dataset.following=fresh.is_following?'1':'0';b.classList.toggle('following',!!fresh.is_following);b.textContent=followLabel(fresh);status(fresh.is_following&&fresh.is_followed_by?'Sekarang kalian berteman.':fresh.is_following?'Sekarang mengikuti pengguna.':'Berhenti mengikuti pengguna.');await loadFeed($('#searchInput').value.trim());if(!$('#friendsPanel')?.classList.contains('hidden'))loadFriends(currentFriendTab,$('#friendSearch')?.value.trim()||'')}catch(e){status(e.message,true)}finally{b.disabled=false}}
-let profileWindowUser=null,profileWindowTab='about';
+let profileWindowUser=null,profileWindowTab='home';
 function profileTabButton(tab,label){return `<button class="profile-window-tab ${profileWindowTab===tab?'active':''}" data-profile-tab="${tab}">${label}</button>`}
 function profileListHTML(users,empty){return (users||[]).map(u=>`<div class="profile-list-row"><div class="profile-list-person">${avatarHTML(u)}<div><b class="clickable-user" data-profile-id="${u.id}">${esc(u.display_name)}</b><small>@${esc(u.username)}</small></div></div></div>`).join('')||`<div class="profile-window-empty">${empty}</div>`}
-async function showProfile(id,tab='about'){
+async function showProfile(id,tab='home'){
   if(!requireLogin())return;
   const modal=$('#profileModal'),box=$('#profileContent');
   profileWindowTab=tab; open('profileModal'); box.innerHTML='<div class="loading">Memuat profil...</div>';
   try{
     const u=(await api(`/users/${id}`)).user; profileWindowUser=u;
     const mine=String(currentUser.id)===String(u.id);
-    const details=[u.bio?`<div class="profile-bio">${esc(u.bio)}</div>`:'',u.city?`<div>📍 Tinggal di <b>${esc(u.city)}</b></div>`:'',u.work?`<div>💼 Bekerja sebagai <b>${esc(u.work)}</b></div>`:'',u.education?`<div>🎓 Pendidikan <b>${esc(u.education)}</b></div>`:'',u.website?`<div>🔗 <a href="${esc(u.website)}" target="_blank" rel="noopener noreferrer">${esc(u.website)}</a></div>`:''].filter(Boolean).join('');
+    const aboutBits=[u.bio?`<p class="profile-bio">${esc(u.bio)}</p>`:'',u.city?`<div>📍 <b>Tinggal di</b> ${esc(u.city)}</div>`:'',u.work?`<div>💼 <b>Bekerja sebagai</b> ${esc(u.work)}</div>`:'',u.education?`<div>🎓 <b>Pendidikan</b> ${esc(u.education)}</div>`:'',u.website?`<div>🔗 <a href="${esc(u.website)}" target="_blank" rel="noopener noreferrer">${esc(u.website)}</a></div>`:''].filter(Boolean).join('');
     box.innerHTML=`
       <div class="profile-window-head">
-        <div class="profile-window-cover"></div>
+        <div class="profile-window-cover"><div class="profile-cover-pattern">RAVIXO</div></div>
         <button class="profile-window-close" data-close="profileModal" aria-label="Tutup">×</button>
         <div class="profile-window-identity">
           ${avatarHTML(u,'profile-avatar-large')}
-          <div class="profile-window-name"><h1>${esc(u.display_name)}</h1><div class="profile-username">@${esc(u.username)}</div></div>
+          <div class="profile-window-name"><h1>${esc(u.display_name)} <span class="profile-window-handle">(@${esc(u.username)})</span></h1><div class="profile-window-subtitle">${u.bio?esc(u.bio):'Kreator di RAVIXO'}</div></div>
           <div class="profile-window-actions">${mine?`<button id="editOwnProfile" class="secondary">✏️ Edit Profil</button>`:`<button id="profileFollowBtn" class="follow-btn ${followClass(u)}" data-user-id="${u.id}" data-following="${u.is_following?'1':'0'}">${followLabel(u)}</button>`}</div>
         </div>
         <div class="profile-window-stats"><span><b>${Number(u.followers_count)||0}</b> Pengikut</span><span><b>${Number(u.following_count)||0}</b> Mengikuti</span><span><b>${Number(u.posts_count)||0}</b> Postingan</span></div>
-        <nav class="profile-window-tabs">${profileTabButton('about','ℹ️ Tentang')}${profileTabButton('friends','👥 Teman')}${profileTabButton('following','➡️ Mengikuti')}${profileTabButton('followers','⬅️ Pengikut')}${profileTabButton('photo-albums','🖼️ Album Foto')}${profileTabButton('video-albums','🎞️ Album Video')}</nav>
+        <nav class="profile-window-tabs">${profileTabButton('home','Semua')}${profileTabButton('about','Tentang')}${profileTabButton('video','Reels')}${profileTabButton('photo','Foto')}${profileTabButton('friends','Teman')}${profileTabButton('following','Mengikuti')}${profileTabButton('followers','Pengikut')}${profileTabButton('photo-albums','Album Foto')}${profileTabButton('video-albums','Album Video')}</nav>
       </div>
       <div id="profileWindowBody" class="profile-window-body"></div>`;
     $('#profileModal').querySelector('.modal-close')?.remove();
@@ -84,14 +84,28 @@ async function showProfile(id,tab='about'){
 async function loadProfileWindowTab(id,tab){
   const body=$('#profileWindowBody'); if(!body)return; body.innerHTML='<div class="loading">Memuat...</div>';
   try{
+    if(tab==='home'||tab==='photo'||tab==='video'){
+      const u=profileWindowUser; const d=await api(`/users/${id}/posts`); let posts=d.posts||[];
+      if(tab==='photo')posts=posts.filter(p=>p.media_type==='image');
+      if(tab==='video')posts=posts.filter(p=>p.media_type==='video');
+      const details=[u.bio?`<p class="profile-bio">${esc(u.bio)}</p>`:'',u.city?`<div>📍 Tinggal di <b>${esc(u.city)}</b></div>`:'',u.work?`<div>💼 Bekerja sebagai <b>${esc(u.work)}</b></div>`:'',u.education?`<div>🎓 Pendidikan <b>${esc(u.education)}</b></div>`:'',u.website?`<div>🔗 <a href="${esc(u.website)}" target="_blank" rel="noopener noreferrer">${esc(u.website)}</a></div>`:''].filter(Boolean).join('');
+      const composer=u.id===currentUser.id?`<section class="profile-composer"><div class="profile-composer-top">${avatarHTML(currentUser)}<button class="fake" id="profileComposerInput">Apa yang Anda pikirkan sekarang?</button></div><div class="profile-composer-actions"><button id="profileLiveBtn">🔴 Video siaran langsung</button><button id="profilePhotoBtn">🖼️ Foto/video</button><button id="profileReelBtn">🎬 Reel</button></div></section>`:'';
+      body.innerHTML=`<div class="profile-home-grid"><aside class="profile-sidebar"><section class="profile-details-card"><h2>Detail pribadi</h2>${details||'<p class="profile-window-empty">Belum ada informasi profil yang ditambahkan.</p>'}<div class="profile-detail-more">Lihat detail pribadi lainnya</div></section><section class="profile-side-card"><h3>Teman</h3><p class="muted">${Number(u.followers_count)||0} pengikut • ${Number(u.following_count)||0} mengikuti</p><button class="secondary" id="profileFriendsBtn">Lihat semua</button></section></aside><section class="profile-feed-column">${composer}<section class="profile-posts-section"><div class="profile-posts-title"><h2>${tab==='photo'?'Foto':tab==='video'?'Reels':'Postingan'}</h2><button class="secondary">⚙️ Kelola postingan</button></div>${posts.map(postCard).join('')||'<div class="profile-window-empty">Belum ada postingan publik.</div>'}</section></section></div>`;
+      attachPostEvents();
+      $('#profileComposerInput')?.addEventListener('click',()=>createPost('text'));
+      $('#profilePhotoBtn')?.addEventListener('click',()=>createPost('image'));
+      $('#profileReelBtn')?.addEventListener('click',()=>createPost('video'));
+      $('#profileLiveBtn')?.addEventListener('click',()=>status('Fitur video siaran langsung segera hadir.'));
+      $('#profileFriendsBtn')?.addEventListener('click',()=>loadProfileWindowTab(id,'friends'));
+      return;
+    }
     if(tab==='about'){
       const u=profileWindowUser; const details=[u.bio?`<div class="profile-bio">${esc(u.bio)}</div>`:'',u.city?`<div>📍 Tinggal di <b>${esc(u.city)}</b></div>`:'',u.work?`<div>💼 Bekerja sebagai <b>${esc(u.work)}</b></div>`:'',u.education?`<div>🎓 Pendidikan <b>${esc(u.education)}</b></div>`:'',u.website?`<div>🔗 <a href="${esc(u.website)}" target="_blank" rel="noopener noreferrer">${esc(u.website)}</a></div>`:''].filter(Boolean).join(''); body.innerHTML=`<section class="profile-about-section"><h2>ℹ️ Tentang ${esc(u.display_name)}</h2>${details||'<p class="profile-window-empty">Belum ada informasi profil yang ditambahkan.</p>'}<div class="profile-info-grid"><div><small>Bergabung</small><b>${u.created_at?new Date(u.created_at).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}):'-'}</b></div><div><small>Post</small><b>${Number(u.posts_count)||0}</b></div><div><small>Pengikut</small><b>${Number(u.followers_count)||0}</b></div><div><small>Mengikuti</small><b>${Number(u.following_count)||0}</b></div></div></section>`; return;
     }
     if(['friends','following','followers'].includes(tab)){
       const d=await api(`/users/${id}/${tab}`); const title=tab==='friends'?'👥 Daftar Teman':tab==='following'?'➡️ Daftar Mengikuti':'⬅️ Daftar Pengikut'; const empty=tab==='friends'?'Belum ada teman.':tab==='following'?'Belum mengikuti akun lain.':'Belum ada pengikut.'; body.innerHTML=`<section class="profile-list-section"><h2>${title}</h2><p class="muted">${(d.users||[]).length} akun</p><div class="profile-list">${profileListHTML(d.users,empty)}</div></section>`; $$('.profile-window-body .clickable-user').forEach(b=>b.onclick=()=>showProfile(Number(b.dataset.profileId))); return;
     }
-    const type=tab==='photo-albums'?'photo':'video';
-    const d=await api(`/users/${id}/albums?type=${type}`); const title=type==='photo'?'🖼️ Album Foto':'🎞️ Album Video';
+    const type=tab==='photo-albums'?'photo':'video'; const d=await api(`/users/${id}/albums?type=${type}`); const title=type==='photo'?'🖼️ Album Foto':'🎞️ Album Video';
     body.innerHTML=`<section class="profile-albums-section"><h2>${title}</h2><p class="muted">${(d.albums||[]).length} album</p><div class="profile-album-grid">${(d.albums||[]).map(a=>`<article class="profile-album-card" data-album-id="${a.id}" data-album-type="${type}"><div class="profile-album-icon">${type==='photo'?'📷':'🎬'}</div><div><h3>${esc(a.name)}</h3><small>${Number(a.media_count)||0} media</small></div></article>`).join('')||`<div class="profile-window-empty">Belum ada album ${type==='photo'?'foto':'video'}.</div>`}</div></section>`;
     $$('.profile-album-card').forEach(c=>c.onclick=()=>openPublicProfileAlbum(id,Number(c.dataset.albumId),type));
   }catch(e){body.innerHTML=`<div class="profile-window-empty">${esc(e.message)}</div>`}
@@ -211,21 +225,34 @@ function renderGoogleButton(){
   window.google.accounts.id.renderButton(box,{theme:'outline',size:'large',text:authMode==='register'?'signup_with':'signin_with',shape:'rectangular',logo_alignment:'left',width:360});
 }
 async function handleGoogleCredential(response){
-  if(!response?.credential){
-    $('#authMessage').textContent='Google tidak mengirim kredensial. Silakan coba lagi.';
-    return;
-  }
+  if(!response?.credential)return;
   try{
     const d=await api('/auth/google',{method:'POST',body:JSON.stringify({credential:response.credential})});
     googlePendingCredential='';
-    await finishGoogleLogin(d,'Berhasil masuk dengan Google.');
+    await finishGoogleLogin(d);
   }catch(e){
-    console.error('Google Sign-In error:',e);
-    $('#authMessage').textContent=e.message||'Login dengan Google gagal. Silakan coba lagi.';
-    status(e.message||'Login dengan Google gagal.',true);
+    try{
+      const raw=String(e.message||'');
+      if(raw.toLowerCase().includes('masukkan nomor hp')||raw.toLowerCase().includes('nomor hp satu kali')){
+        googlePendingCredential=response.credential;
+        const d=await fetch(API_BASE+'/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:response.credential})}).then(async r=>{const x=await r.json().catch(()=>({}));return {ok:r.ok,status:r.status,data:x}});
+        if(d.data?.needs_phone){
+          setAuthMode('register');
+          $('#authEmail').value=d.data.email||'';
+          $('#displayName').value=d.data.display_name||'';
+          $('#username').value=d.data.username||'';
+          $('#authForm')?.classList.add('hidden');
+          $('#googleSignIn')?.classList.add('hidden');
+          $('#googleCompleteWrap')?.classList.remove('hidden');
+          $('#authMessage').textContent='';
+          status('Masukkan nomor HP satu kali untuk menyelesaikan pendaftaran Google.',true);
+          return;
+        }
+      }
+      $('#authMessage').textContent=e.message;
+    }catch(err){$('#authMessage').textContent=err.message||e.message}
   }
 }
-
 async function initGoogleAuth(){
   try{
     const r=await fetch(API_BASE+'/config');const cfg=await r.json().catch(()=>({}));googleClientId=cfg.google_client_id||'';
@@ -233,10 +260,8 @@ async function initGoogleAuth(){
     let tries=0;
     const boot=()=>{
       if(window.google?.accounts?.id){
-        window.google.accounts.id.initialize({client_id:googleClientId,callback:handleGoogleCredential,cancel_on_tap_outside:false});
-        googleInitialized=true;
-        renderGoogleButton();
-        try{window.google.accounts.id.prompt();}catch(e){console.warn('Google One Tap prompt gagal:',e)}
+        window.google.accounts.id.initialize({client_id:googleClientId,callback:handleGoogleCredential});
+        googleInitialized=true;renderGoogleButton();
       }else if(tries++<100)setTimeout(boot,100);
     };
     boot();

@@ -144,17 +144,11 @@ body.media-viewer-open{overflow:hidden}
 /* Post editing + upload progress */
 .edit-post-btn{color:#2457a6!important}.upload-progress{margin:12px 0;padding:12px 14px;border:1px solid #dbe3ef;border-radius:12px;background:#f7faff}.upload-progress-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;font-size:13px}.upload-progress-track{height:10px;background:#e8edf3;border-radius:999px;overflow:hidden}.upload-progress-track i{display:block;width:0;height:100%;background:#1877f2;border-radius:999px;transition:width .15s ease}.media-preview-item.existing{opacity:.92}.media-preview-item.existing small{display:block;color:#555;margin-top:4px}
 
+/* RAVIXO v1.0.8 upload layout */
 
-/* Compose media picker and horizontal preview */
-#composeModal .modal-card{width:min(680px,100%);max-height:92vh;display:flex;flex-direction:column;padding-bottom:0}
-#composeModal #composeForm{display:flex;flex-direction:column;min-height:0;flex:1}
-#composeModal #mediaPreview{flex:0 0 auto;overflow-x:auto;overflow-y:hidden;display:flex;gap:10px;align-items:flex-start;padding:8px 2px 12px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
-#composeModal .media-preview-item{flex:0 0 150px;width:150px;scroll-snap-align:start;margin:0;padding:7px;border:1px solid #e5e7eb;border-radius:12px;background:#fafafa;overflow:hidden}
-#composeModal .media-preview-item img,#composeModal .media-preview-item video{display:block;width:136px;height:120px;object-fit:cover;margin:0;border-radius:8px;background:#111}
-#composeModal .media-preview-item small{display:block;margin-top:6px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.media-choice-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-.media-choice-row .secondary{margin:0}
-.compose-sticky-actions{position:sticky;bottom:0;margin:12px -24px 0;padding:12px 24px calc(12px + env(safe-area-inset-bottom));background:rgba(255,255,255,.97);backdrop-filter:blur(8px);border-top:1px solid #e8eaed;z-index:3}
-.compose-sticky-actions .primary{margin:0;width:100%;min-height:46px}
-#composeModal .upload-progress{flex:0 0 auto}
-@media(max-width:700px){#composeModal{padding:10px}#composeModal .modal-card{max-height:96dvh;border-radius:16px;padding:18px 16px 0}#composeModal .modal-card .modal-close{right:10px;top:7px}#composeModal .media-preview-item{flex-basis:132px;width:132px}#composeModal .media-preview-item img,#composeModal .media-preview-item video{width:118px;height:100px}.compose-sticky-actions{margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px}.media-choice-row{gap:8px}}
+.post-modal .media-picker,.post-modal .media-actions,.post-modal .upload-actions,#createPostModal .media-picker,#createPostModal .media-actions,#createPostModal .upload-actions,.modal .media-picker,.modal .media-actions{display:flex!important;justify-content:center!important;align-items:center!important;width:100%!important;text-align:center!important}
+.post-modal .media-picker button,.post-modal .media-actions button,.post-modal .upload-actions button,#createPostModal .media-picker button,#createPostModal .media-actions button,#createPostModal .upload-actions button,.modal .media-picker button,.modal .media-actions button{min-width:250px;margin-left:auto!important;margin-right:auto!important}
+.post-modal .media-help,#createPostModal .media-help,.modal .media-help{text-align:center!important;width:100%!important}
+#selectedMedia,.selected-media,.media-preview,.upload-preview,.preview-list{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;gap:10px!important;overflow-x:auto!important;overflow-y:hidden!important;max-width:100%!important;padding:8px 4px!important}
+#selectedMedia>*,.selected-media>*,.media-preview>*,.upload-preview>*,.preview-list>*{flex:0 0 auto!important}
+.post-modal .modal-footer,#createPostModal .modal-footer,.modal .modal-footer,.post-modal .publish-bar,#createPostModal .publish-bar{position:sticky!important;bottom:0!important;z-index:20!important;background:inherit!important;padding-top:12px!important}

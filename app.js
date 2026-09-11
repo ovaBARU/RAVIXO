@@ -102,7 +102,6 @@ async function editPost(id){
   if($('#postVisibility'))$('#postVisibility').value=p.visibility||'public';updateAudienceUI();
   if(title)title.textContent='Edit postingan';
   if(input){input.value='';input.accept='image/*,video/*';input.multiple=true;input.dataset.postKind='edit';input.dataset.editPostId=String(id);}
-  $('#choosePhoto')?.classList.remove('hidden');$('#chooseVideo')?.classList.remove('hidden');
   const form=$('#composeForm');if(form)form.dataset.editPostId=String(id);
   const pub=form?.querySelector('button.primary');if(pub)pub.textContent='Simpan perubahan';
   open('composeModal');
@@ -188,8 +187,7 @@ async function showComments(id){selectedPost=id;open('commentModal');$('#comment
 let composeFriends=[];
 async function loadComposeFriends(){try{const d=await api(`/users/${currentUser.id}/friends`);composeFriends=d.users||[];const box=$('#selectedFriendsList');if(!box)return;box.innerHTML=composeFriends.map(u=>`<label class="selected-friend"><input type="checkbox" value="${u.id}">${avatarHTML(u)}<span><b>${esc(u.display_name)}</b><small>@${esc(u.username)}</small></span></label>`).join('')||'<span class="muted">Kamu belum memiliki teman.</span>';}catch(e){$('#selectedFriendsList').innerHTML=`<span class="muted">${esc(e.message)}</span>`}}
 function updateAudienceUI(){const v=$('#postVisibility')?.value||'public';$('#selectedFriendsWrap')?.classList.toggle('hidden',v!=='selected');if(v==='selected'&&currentUser&&!composeFriends.length)loadComposeFriends()}
-function chooseComposeMedia(kind){const input=$('#mediaInput');if(!input)return;input.value='';input.accept=kind==='image'?'image/*':'video/*';input.multiple=kind==='image';input.dataset.postKind=kind;input.click()}
-async function createPost(kind='text',autoPick=false){
+async function createPost(kind='text'){
   if(!requireLogin())return;
   selectedMedia=[];
   const cap=$('#captionInput'),preview=$('#mediaPreview'),title=$('#composeTitle'),input=$('#mediaInput');
@@ -198,14 +196,9 @@ async function createPost(kind='text',autoPick=false){
   if($('#postVisibility'))$('#postVisibility').value='public';
   $('#selectedFriendsWrap')?.classList.add('hidden');
   if(title)title.textContent=kind==='text'?'Buat postingan':kind==='image'?'Tambah foto':'Tambah video';
-  if(input){input.value='';input.accept='image/*,video/*';input.multiple=true;input.dataset.postKind=kind;}
-  const choosePhoto=$('#choosePhoto'),chooseVideo=$('#chooseVideo');
-  if(choosePhoto)choosePhoto.classList.toggle('hidden',kind==='video');
-  if(chooseVideo)chooseVideo.classList.toggle('hidden',kind==='image');
-  const pub=$('#composeForm')?.querySelector('button.primary');if(pub)pub.textContent='Publikasikan';
-  const form=$('#composeForm');if(form)delete form.dataset.editPostId;
+  if(input){input.value='';input.accept=kind==='image'?'image/*':kind==='video'?'video/*':'image/*,video/*';input.multiple=kind!=='video';input.dataset.postKind=kind;}
   open('composeModal');
-  if(autoPick&&kind!=='text')requestAnimationFrame(()=>chooseComposeMedia(kind));
+  if(kind!=='text')requestAnimationFrame(()=>input?.click());
 }
 async function uploadMedia(file){
   const fd=new FormData();fd.append('media',file);
@@ -267,7 +260,6 @@ async function publishPost(e){
 function previewSelectedMedia(files){
   const box=$('#mediaPreview');if(!box)return;
   if(!files||!files.length){box.innerHTML='';return}
-  box.className='preview media-preview-row';
   box.innerHTML=files.map((file,i)=>{
     const url=URL.createObjectURL(file);
     return file.type.startsWith('video/')
@@ -413,7 +405,7 @@ function setAuthMode(m){
 }
 function hideMainPanels(){['profilePage','messagesPage','albumPage'].forEach(id=>$('#'+id)?.classList.add('hidden'));$('.hero')?.classList.remove('hidden');$('.composer')?.classList.remove('hidden');$('.grid')?.classList.remove('hidden');$('#friendsPanel')?.classList.add('hidden')}
 function showView(v){hideMainPanels();if(v==='home')return loadFeed();if(v==='videos'||v==='photos'){const type=v==='videos'?'video':'image';$('#feed').innerHTML=currentPosts.filter(p=>p.media_type===type).map(postCard).join('')||'<div class="panel empty">Belum ada konten.</div>';attachPostEvents();return}if(v==='creator')return loadCreator();if(v==='notifications')return loadNotifications();if(v==='messages')return openMessages();if(v==='settings')return showSettings();if(v==='friends')return showFriends('friends');if(v==='photo-albums')return loadAlbumsPage('photo');if(v==='video-albums')return loadAlbumsPage('video')}
-$('#authForm')?.addEventListener('submit',auth);$('#googleCompleteBtn')?.addEventListener('click',async()=>{if(!googlePendingCredential)return;const phone=$('#googlePhone')?.value.trim();if(!phone)return $('#authMessage').textContent='Nomor HP wajib diisi.';const btn=$('#googleCompleteBtn');btn.disabled=true;try{const d=await api('/auth/google',{method:'POST',body:JSON.stringify({credential:googlePendingCredential,phone,display_name:$('#displayName').value.trim(),username:$('#username').value.trim()})});googlePendingCredential='';await finishGoogleLogin(d,'Akun berhasil dibuat dengan Google.')}catch(e){$('#authMessage').textContent=e.message}finally{btn.disabled=false}});$('#loginTab')?.addEventListener('click',()=>setAuthMode('login'));$('#registerTab')?.addEventListener('click',()=>setAuthMode('register'));$('#authSideBtn')?.addEventListener('click',()=>{if(currentUser){localStorage.removeItem(TOKEN_KEY);currentUser=null;stopNotificationPolling();updateUserUI();status('Anda sudah keluar.');loadFeed()}else open('authModal')});$('#profileBtn')?.addEventListener('click',()=>currentUser?showProfile(currentUser.id):open('authModal'));$('#composerInput')?.addEventListener('click',()=>createPost('text'));$('#photoBtn')?.addEventListener('click',()=>createPost('image',false));$('#videoBtn')?.addEventListener('click',()=>createPost('video',false));$('#choosePhoto')?.addEventListener('click',()=>chooseComposeMedia('image'));$('#chooseVideo')?.addEventListener('click',()=>chooseComposeMedia('video'));$('#postVisibility')?.addEventListener('change',updateAudienceUI);$('#selectAllFriends')?.addEventListener('click',()=>$$('#selectedFriendsList input[type=checkbox]').forEach(x=>x.checked=true));$('#startLiveBtn')?.addEventListener('click',startLive);$('#endLiveBtn')?.addEventListener('click',endLive);$('#monetizeBtn')?.addEventListener('click',loadCreator);$('#dashboardBtn')?.addEventListener('click',loadCreator);$('#earningsBtn')?.addEventListener('click',loadCreator);$('#notificationBtn')?.addEventListener('click',loadNotifications);$('#messageBtn')?.addEventListener('click',openMessages);
+$('#authForm')?.addEventListener('submit',auth);$('#googleCompleteBtn')?.addEventListener('click',async()=>{if(!googlePendingCredential)return;const phone=$('#googlePhone')?.value.trim();if(!phone)return $('#authMessage').textContent='Nomor HP wajib diisi.';const btn=$('#googleCompleteBtn');btn.disabled=true;try{const d=await api('/auth/google',{method:'POST',body:JSON.stringify({credential:googlePendingCredential,phone,display_name:$('#displayName').value.trim(),username:$('#username').value.trim()})});googlePendingCredential='';await finishGoogleLogin(d,'Akun berhasil dibuat dengan Google.')}catch(e){$('#authMessage').textContent=e.message}finally{btn.disabled=false}});$('#loginTab')?.addEventListener('click',()=>setAuthMode('login'));$('#registerTab')?.addEventListener('click',()=>setAuthMode('register'));$('#authSideBtn')?.addEventListener('click',()=>{if(currentUser){localStorage.removeItem(TOKEN_KEY);currentUser=null;stopNotificationPolling();updateUserUI();status('Anda sudah keluar.');loadFeed()}else open('authModal')});$('#profileBtn')?.addEventListener('click',()=>currentUser?showProfile(currentUser.id):open('authModal'));$('#composerInput')?.addEventListener('click',()=>createPost('text'));$('#photoBtn')?.addEventListener('click',()=>createPost('image'));$('#videoBtn')?.addEventListener('click',()=>createPost('video'));$('#chooseMedia')?.addEventListener('click',()=>$('#mediaInput')?.click());$('#postVisibility')?.addEventListener('change',updateAudienceUI);$('#selectAllFriends')?.addEventListener('click',()=>$$('#selectedFriendsList input[type=checkbox]').forEach(x=>x.checked=true));$('#startLiveBtn')?.addEventListener('click',startLive);$('#endLiveBtn')?.addEventListener('click',endLive);$('#monetizeBtn')?.addEventListener('click',loadCreator);$('#dashboardBtn')?.addEventListener('click',loadCreator);$('#earningsBtn')?.addEventListener('click',loadCreator);$('#notificationBtn')?.addEventListener('click',loadNotifications);$('#messageBtn')?.addEventListener('click',openMessages);
 function navigateView(a){if(!a)return;$$('#mainNav a,#mobileNav a').forEach(x=>x.classList.toggle('active',x.dataset.view===a.dataset.view));showView(a.dataset.view)}
 $('#mainNav')?.addEventListener('click',e=>{const a=e.target.closest('a[data-view]');if(!a)return;e.preventDefault();navigateView(a)});
 $('#mobileNav')?.addEventListener('click',e=>{const a=e.target.closest('a[data-view]');if(!a)return;e.preventDefault();navigateView(a)});

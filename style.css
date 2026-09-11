@@ -229,3 +229,11 @@ nav a{color:#514A5A}
 .modal .media-picker button:hover,.modal .media-actions button:hover{background:#EEE7F3!important}
 /* Keep semantic errors/alerts distinct from the wellness palette */
 .form-message,.status.error{color:#A33D4A}
+
+/* RAVIXO v1.1.0 — drag & drop media uploader */
+.media-drop-zone{margin:10px auto 12px;width:100%;min-height:105px;border:2px dashed #cfc6d8;border-radius:14px;background:#faf8fb;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:5px;padding:14px;color:#5e5667;transition:.18s ease;cursor:pointer}
+.media-drop-zone:hover,.media-drop-zone.drag-over{border-color:#9b82b1;background:#f3eef6;transform:translateY(-1px)}
+.media-drop-zone .media-drop-icon{font-size:22px;line-height:1}
+.media-drop-zone b{font-size:14px}.media-drop-zone span,.media-drop-zone small{font-size:12px;color:#777}
+#chooseMedia{display:block!important;width:min(280px,100%)!important;margin:8px auto!important}
+@media(max-width:700px){.media-drop-zone{min-height:95px;padding:12px}.media-drop-zone b{font-size:13px}}

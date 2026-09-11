@@ -25,16 +25,55 @@ function mediaHTML(p){
       ? `<video class="media realmedia portrait-friendly-video" src="${url}" controls preload="metadata"></video>`
       : `<img class="media realmedia" src="${url}" alt="Media postingan" loading="lazy">`;
   }
-  const shown=Math.min(items.length,5);
-  const cells=items.slice(0,shown).map((m,i)=>{
-    const url=esc(m.media_url), more=items.length-shown;
-    const overlay=(i===shown-1&&more>0)?`<span class="gallery-more-overlay">+${more}</span>`:'';
+  const slides=items.map((m,i)=>{
+    const url=esc(m.media_url);
     const media=m.media_type==='video'
-      ? `<video class="gallery-media" src="${url}" preload="metadata" muted playsinline></video>`
-      : `<img class="gallery-media" src="${url}" alt="Foto postingan ${i+1}" loading="lazy">`;
-    return `<button type="button" class="gallery-cell" data-gallery-post="${esc(p.id)}" data-gallery-index="${i}">${media}${overlay}</button>`;
+      ? `<video class="feed-carousel-media" src="${url}" preload="metadata" muted playsinline controls></video>`
+      : `<img class="feed-carousel-media" src="${url}" alt="Foto postingan ${i+1}" loading="lazy">`;
+    return `<div class="feed-carousel-slide" data-index="${i}">${media}</div>`;
   }).join('');
-  return `<div class="post-media-gallery gallery-count-${shown} ${items.length>5?'has-more':''}">${cells}</div>`;
+  return `<div class="post-media-carousel" data-carousel-count="${items.length}" data-carousel-index="0" data-post-id="${esc(p.id)}">
+    <div class="feed-carousel-viewport"><div class="feed-carousel-track">${slides}</div></div>
+    <button type="button" class="feed-carousel-nav prev" aria-label="Media sebelumnya">‹</button>
+    <button type="button" class="feed-carousel-nav next" aria-label="Media berikutnya">›</button>
+    <div class="feed-carousel-counter">1 / ${items.length}</div>
+    <div class="feed-carousel-dots">${items.map((_,i)=>`<button type="button" data-dot="${i}" aria-label="Lihat media ${i+1}"></button>`).join('')}</div>
+  </div>`;
+}
+let activeFeedCarousel=null;
+function initFeedCarousels(){
+  $$('.post-media-carousel').forEach(carousel=>{
+    if(carousel.dataset.bound==='1')return;
+    carousel.dataset.bound='1';
+    carousel.addEventListener('pointerenter',()=>activeFeedCarousel=carousel);
+    carousel.addEventListener('pointerdown',()=>activeFeedCarousel=carousel);
+    carousel.addEventListener('touchstart',()=>activeFeedCarousel=carousel,{passive:true});
+    const track=carousel.querySelector('.feed-carousel-track');
+    const count=Number(carousel.dataset.carouselCount)||0;
+    const update=(idx,animate=true)=>{
+      if(!count||!track)return;
+      idx=Math.max(0,Math.min(idx,count-1));
+      carousel.dataset.carouselIndex=String(idx);
+      track.style.transition=animate?'transform .28s ease':'none';
+      track.style.transform=`translate3d(${-idx*100}%,0,0)`;
+      const counter=carousel.querySelector('.feed-carousel-counter'); if(counter)counter.textContent=`${idx+1} / ${count}`;
+      carousel.querySelectorAll('[data-dot]').forEach((d,i)=>d.classList.toggle('active',i===idx));
+      const prev=carousel.querySelector('.feed-carousel-nav.prev'),next=carousel.querySelector('.feed-carousel-nav.next');
+      if(prev)prev.disabled=idx===0; if(next)next.disabled=idx===count-1;
+    };
+    carousel._carouselUpdate=update;
+    carousel.querySelector('.feed-carousel-nav.prev')?.addEventListener('click',e=>{e.stopPropagation();update((Number(carousel.dataset.carouselIndex)||0)-1)});
+    carousel.querySelector('.feed-carousel-nav.next')?.addEventListener('click',e=>{e.stopPropagation();update((Number(carousel.dataset.carouselIndex)||0)+1)});
+    carousel.querySelectorAll('[data-dot]').forEach(d=>d.addEventListener('click',e=>{e.stopPropagation();update(Number(d.dataset.dot)||0)}));
+    carousel.querySelectorAll('.feed-carousel-slide').forEach(slide=>slide.addEventListener('click',e=>{if(e.target.closest('video'))return;const idx=Number(slide.dataset.index)||0;openGallery(carousel.dataset.postId,idx)}));
+    let sx=0,sy=0,drag=false,moved=false;
+    carousel.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;sx=e.touches[0].clientX;sy=e.touches[0].clientY;drag=true;moved=false},{passive:true});
+    carousel.addEventListener('touchmove',e=>{if(!drag||e.touches.length!==1)return;const dx=e.touches[0].clientX-sx,dy=e.touches[0].clientY-sy;if(Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)){moved=true;e.stopPropagation()}},{passive:true});
+    carousel.addEventListener('touchend',e=>{if(!drag)return;drag=false;const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)){update((Number(carousel.dataset.carouselIndex)||0)+(dx<0?1:-1));}}, {passive:true});
+    carousel.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'){sx=e.clientX;sy=e.clientY;drag=true;carousel.setPointerCapture?.(e.pointerId)}});
+    carousel.addEventListener('pointerup',e=>{if(!drag)return;drag=false;if(e.pointerType==='mouse'){const dx=e.clientX-sx,dy=e.clientY-sy;if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy))update((Number(carousel.dataset.carouselIndex)||0)+(dx<0?1:-1))}});
+    update(0,false);
+  });
 }
 function openGallery(postId,index=0){
   const p=currentPosts.find(x=>String(x.id)===String(postId));
@@ -92,7 +131,7 @@ function attachMediaViewer(){
 function visibilityLabel(v){return v==='private'?'🔒 Privat':v==='friends'?'👥 Teman':v==='selected'?'⭐ Teman terpilih':'🌎 Publik'}
 
 function postCard(p){const liked=!!p.liked,isMine=currentUser&&String(currentUser.id)===String(p.user_id);return `<article class="post" data-post-id="${esc(p.id)}"><div class="head">${avatarHTML({display_name:p.display_name,username:p.username,avatar_url:p.avatar_url})}<div><b class="clickable-user" data-profile-id="${esc(p.user_id)}">${esc(p.display_name||p.username||'Pengguna RAVIXO')}</b><small>@${esc(p.username||'')} · ${new Date(p.created_at).toLocaleString('id-ID')} · ${visibilityLabel(p.visibility)}</small></div>${!isMine&&currentUser?`<button class="follow-btn ${p.is_following?'following':''}" data-user-id="${esc(p.user_id)}" data-following="${p.is_following?'1':'0'}">${p.is_following&&p.is_followed_by?'👥 Teman':p.is_following?'✓ Mengikuti':'+ Ikuti'}</button>`:''}</div><p>${esc(p.caption||'')}</p>${mediaHTML(p)}<div class="stats">❤️ ${Number(p.likes_count)||0}　 💬 ${Number(p.comments_count)||0} komentar　 ↗ ${Number(p.shares_count)||0} dibagikan　 👁 ${Number(p.views_count)||0}</div><div class="actions"><button class="like-btn" data-id="${esc(p.id)}">${liked?'❤️ Disukai':'❤️ Suka'}</button><button class="comment-btn" data-id="${esc(p.id)}">💬 Komentar</button><button class="share-btn" data-id="${esc(p.id)}">↗ Bagikan</button>${isMine?`<button class="edit-post-btn" data-id="${esc(p.id)}">✏️ Edit</button><button class="delete-post-btn" data-id="${esc(p.id)}">🗑️ Hapus</button>`:''}</div></article>`}
-async function loadFeed(q=''){const feed=$('#feed');feed.innerHTML='<div class="loading">Memuat feed RAVIXO...</div>';try{const d=await api('/posts?limit=50'+(q?'&q='+encodeURIComponent(q):''));currentPosts=d.posts||[];feed.innerHTML=currentPosts.length?currentPosts.map(postCard).join(''):'<div class="panel empty">Belum ada postingan.</div>';attachPostEvents();attachMediaViewer()}catch(e){feed.innerHTML='<div class="panel empty">Feed gagal dimuat.</div>';status(e.message,true)}}
+async function loadFeed(q=''){const feed=$('#feed');feed.innerHTML='<div class="loading">Memuat feed RAVIXO...</div>';try{const d=await api('/posts?limit=50'+(q?'&q='+encodeURIComponent(q):''));currentPosts=d.posts||[];feed.innerHTML=currentPosts.length?currentPosts.map(postCard).join(''):'<div class="panel empty">Belum ada postingan.</div>';attachPostEvents();initFeedCarousels();attachMediaViewer()}catch(e){feed.innerHTML='<div class="panel empty">Feed gagal dimuat.</div>';status(e.message,true)}}
 async function editPost(id){
   if(!requireLogin())return;
   const p=currentPosts.find(x=>String(x.id)===String(id));if(!p)return;
@@ -461,7 +500,7 @@ $$('[data-friend-tab]').forEach(b=>b.onclick=()=>loadFriends(b.dataset.friendTab
 $$('[data-close]').forEach(b=>b.onclick=()=>{if(b.dataset.close==='authModal'&&!currentUser){enforceAuthGate();return}if(b.dataset.close==='messageModal')stopChatPolling();close(b.dataset.close)});$$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m){if(m.id==='authModal'&&!currentUser){enforceAuthGate();return}if(m.id==='messageModal')stopChatPolling();m.classList.add('hidden')}}));
 $('#searchInput')?.addEventListener('input',e=>{const m=$('#mobileSearchInput');if(m)m.value=e.target.value;loadFeed(e.target.value.trim())});
 $('#mobileSearchInput')?.addEventListener('input',e=>{const d=e.target.value.trim();$('#searchInput').value=e.target.value;loadFeed(d)});$('#friendSearch')?.addEventListener('input',e=>{if(currentFriendTab==='discover')loadFriends('discover',e.target.value.trim())});
-$('#mediaViewerClose')?.addEventListener('click',closeMediaViewer);$('#mediaViewerPrev')?.addEventListener('click',()=>galleryMove(-1));$('#mediaViewerNext')?.addEventListener('click',()=>galleryMove(1));$('#mediaViewer')?.addEventListener('click',e=>{if(e.target.id==='mediaViewer')closeMediaViewer()});document.addEventListener('keydown',e=>{if(!$('#mediaViewer')?.classList.contains('hidden')){if(e.key==='ArrowRight')return galleryMove(1);if(e.key==='ArrowLeft')return galleryMove(-1)}if(!$('#composeModal')?.classList.contains('hidden')){if(e.key==='ArrowRight'){e.preventDefault();return scrollPreview(1)}if(e.key==='ArrowLeft'){e.preventDefault();return scrollPreview(-1)}}if(e.key==='Escape'){closeMediaViewer();['authModal','creatorModal','profileModal','notificationModal','commentModal','composeModal','messageModal','settingsModal','avatarCropModal','liveModal'].forEach(id=>close(id))}});$('#composeForm')?.addEventListener('submit',publishPost);$('#mediaInput')?.addEventListener('change',e=>{handleSelectedMedia(e.target.files)});$('#chooseMedia')?.addEventListener('click',()=>$('#mediaInput')?.click());const mediaDropZone=$('#mediaDropZone');if(mediaDropZone){['dragenter','dragover'].forEach(ev=>mediaDropZone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();mediaDropZone.classList.add('drag-over')}));['dragleave','drop'].forEach(ev=>mediaDropZone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();if(ev==='dragleave'&&!mediaDropZone.contains(e.relatedTarget))mediaDropZone.classList.remove('drag-over');if(ev==='drop'){mediaDropZone.classList.remove('drag-over');handleSelectedMedia(e.dataTransfer.files)}}));mediaDropZone.addEventListener('click',()=>$('#mediaInput')?.click());mediaDropZone.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('#mediaInput')?.click()}})};$('#changeAvatarBtn').onclick=()=>$('#avatarInput').click();$('#avatarInput').onchange=e=>{const f=e.target.files[0];if(f)uploadAvatar(f);e.target.value=''};$('#avatarCropCancel').onclick=closeAvatarCrop;$('#avatarCropReset').onclick=resetAvatarCrop;$('#avatarCropSave').onclick=saveCroppedAvatar;$('#avatarCropZoom').oninput=e=>{avatarCrop.scale=Number(e.target.value)||1;positionAvatarCrop()};$('#avatarCropStage').addEventListener('pointerdown',e=>{if(!avatarCrop.img)return;avatarCrop.drag=true;avatarCrop.sx=e.clientX;avatarCrop.sy=e.clientY;avatarCrop.ox=avatarCrop.x;avatarCrop.oy=avatarCrop.y;$('#avatarCropImage').classList.add('dragging');e.currentTarget.setPointerCapture?.(e.pointerId)});$('#avatarCropStage').addEventListener('pointermove',e=>{if(!avatarCrop.drag)return;avatarCrop.x=avatarCrop.ox+(e.clientX-avatarCrop.sx);avatarCrop.y=avatarCrop.oy+(e.clientY-avatarCrop.sy);positionAvatarCrop()});['pointerup','pointercancel','pointerleave'].forEach(ev=>$('#avatarCropStage').addEventListener(ev,()=>{avatarCrop.drag=false;$('#avatarCropImage').classList.remove('dragging')}));
+$('#mediaViewerClose')?.addEventListener('click',closeMediaViewer);$('#mediaViewerPrev')?.addEventListener('click',()=>galleryMove(-1));$('#mediaViewerNext')?.addEventListener('click',()=>galleryMove(1));$('#mediaViewer')?.addEventListener('click',e=>{if(e.target.id==='mediaViewer')closeMediaViewer()});document.addEventListener('keydown',e=>{if(!$('#mediaViewer')?.classList.contains('hidden')){if(e.key==='ArrowRight')return galleryMove(1);if(e.key==='ArrowLeft')return galleryMove(-1)}if(!$('#composeModal')?.classList.contains('hidden')){if(e.key==='ArrowRight'){e.preventDefault();return scrollPreview(1)}if(e.key==='ArrowLeft'){e.preventDefault();return scrollPreview(-1)}}if($('#mediaViewer')?.classList.contains('hidden') && (e.key==='ArrowRight'||e.key==='ArrowLeft') && activeFeedCarousel?._carouselUpdate){e.preventDefault();activeFeedCarousel._carouselUpdate((Number(activeFeedCarousel.dataset.carouselIndex)||0)+(e.key==='ArrowRight'?1:-1))}if(e.key==='Escape'){closeMediaViewer();['authModal','creatorModal','profileModal','notificationModal','commentModal','composeModal','messageModal','settingsModal','avatarCropModal','liveModal'].forEach(id=>close(id))}});$('#composeForm')?.addEventListener('submit',publishPost);$('#mediaInput')?.addEventListener('change',e=>{handleSelectedMedia(e.target.files)});$('#chooseMedia')?.addEventListener('click',()=>$('#mediaInput')?.click());const mediaDropZone=$('#mediaDropZone');if(mediaDropZone){['dragenter','dragover'].forEach(ev=>mediaDropZone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();mediaDropZone.classList.add('drag-over')}));['dragleave','drop'].forEach(ev=>mediaDropZone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();if(ev==='dragleave'&&!mediaDropZone.contains(e.relatedTarget))mediaDropZone.classList.remove('drag-over');if(ev==='drop'){mediaDropZone.classList.remove('drag-over');handleSelectedMedia(e.dataTransfer.files)}}));mediaDropZone.addEventListener('click',()=>$('#mediaInput')?.click());mediaDropZone.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('#mediaInput')?.click()}})};$('#changeAvatarBtn').onclick=()=>$('#avatarInput').click();$('#avatarInput').onchange=e=>{const f=e.target.files[0];if(f)uploadAvatar(f);e.target.value=''};$('#avatarCropCancel').onclick=closeAvatarCrop;$('#avatarCropReset').onclick=resetAvatarCrop;$('#avatarCropSave').onclick=saveCroppedAvatar;$('#avatarCropZoom').oninput=e=>{avatarCrop.scale=Number(e.target.value)||1;positionAvatarCrop()};$('#avatarCropStage').addEventListener('pointerdown',e=>{if(!avatarCrop.img)return;avatarCrop.drag=true;avatarCrop.sx=e.clientX;avatarCrop.sy=e.clientY;avatarCrop.ox=avatarCrop.x;avatarCrop.oy=avatarCrop.y;$('#avatarCropImage').classList.add('dragging');e.currentTarget.setPointerCapture?.(e.pointerId)});$('#avatarCropStage').addEventListener('pointermove',e=>{if(!avatarCrop.drag)return;avatarCrop.x=avatarCrop.ox+(e.clientX-avatarCrop.sx);avatarCrop.y=avatarCrop.oy+(e.clientY-avatarCrop.sy);positionAvatarCrop()});['pointerup','pointercancel','pointerleave'].forEach(ev=>$('#avatarCropStage').addEventListener(ev,()=>{avatarCrop.drag=false;$('#avatarCropImage').classList.remove('dragging')}));
 $('#saveSettings').onclick=async()=>{if(!requireLogin())return;const btn=$('#saveSettings');btn.disabled=true;$('#settingsMessage').textContent='Menyimpan profil...';try{const d=await api('/me',{method:'PUT',body:JSON.stringify({display_name:$('#settingsName').value.trim(),username:$('#settingsUsername').value.trim(),bio:$('#settingsBio').value.trim(),city:$('#settingsCity').value.trim(),work:$('#settingsWork').value.trim(),education:$('#settingsEducation').value.trim(),website:$('#settingsWebsite').value.trim()})});currentUser=d.user;updateUserUI();renderSettingsAvatar();$('#settingsMessage').textContent='Profil berhasil disimpan.';status('Profil berhasil diperbarui.')}catch(e){$('#settingsMessage').textContent=e.message;status(e.message,true)}finally{btn.disabled=false}};
 function enforceAuthGate(){
   if(currentUser){$('#authModal')?.classList.remove('auth-required');return}

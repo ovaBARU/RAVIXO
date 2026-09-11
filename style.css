@@ -139,3 +139,7 @@ body.media-viewer-open{overflow:hidden}
   .post-media-gallery .gallery-media{min-height:100px}
   .media-viewer-nav{width:42px;height:42px;font-size:34px;line-height:34px}.media-viewer-nav.prev{left:8px}.media-viewer-nav.next{right:8px}
 }
+
+
+/* Post editing + upload progress */
+.edit-post-btn{color:#2457a6!important}.upload-progress{margin:12px 0;padding:12px 14px;border:1px solid #dbe3ef;border-radius:12px;background:#f7faff}.upload-progress-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;font-size:13px}.upload-progress-track{height:10px;background:#e8edf3;border-radius:999px;overflow:hidden}.upload-progress-track i{display:block;width:0;height:100%;background:#1877f2;border-radius:999px;transition:width .15s ease}.media-preview-item.existing{opacity:.92}.media-preview-item.existing small{display:block;color:#555;margin-top:4px}

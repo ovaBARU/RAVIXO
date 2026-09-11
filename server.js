@@ -126,6 +126,21 @@ app.post('/api/posts',auth,async(req,res)=>{try{
   const full=await pool.query(`SELECT p.*,(SELECT COALESCE(json_agg(json_build_object('media_url',pm.media_url,'media_type',pm.media_type) ORDER BY pm.sort_order,pm.id),'[]'::json) FROM post_media pm WHERE pm.post_id=p.id) AS media_items FROM posts p WHERE p.id=$1`,[post.id]);
   res.status(201).json({post:full.rows[0]});
 }catch(e){console.error(e);res.status(500).json({error:'Postingan gagal dibuat.'})}});
+app.put('/api/posts/:id',auth,async(req,res)=>{try{
+  const id=String(req.params.id);const caption=String(req.body.caption||'').trim();const visibility=String(req.body.visibility||'public');
+  const allowed=['public','private','friends','selected'];if(!allowed.includes(visibility))return res.status(400).json({error:'Pilihan privasi tidak valid.'});
+  const own=await pool.query('SELECT * FROM posts WHERE id=$1 AND user_id=$2',[id,req.user.id]);if(!own.rowCount)return res.status(404).json({error:'Postingan tidak ditemukan atau bukan milikmu.'});
+  let ids=Array.isArray(req.body.audience_user_ids)?[...new Set(req.body.audience_user_ids.map(String).filter(x=>/^\d+$/.test(x)&&x!==String(req.user.id)))]:[];
+  if(visibility==='selected'){if(!ids.length)return res.status(400).json({error:'Pilih minimal satu teman.'});const friends=await pool.query(`SELECT u.id FROM follows f JOIN follows g ON g.follower_id=f.following_id AND g.following_id=f.follower_id JOIN users u ON u.id=f.following_id WHERE f.follower_id=$1 AND u.id=ANY($2::bigint[])`,[req.user.id,ids]);ids=friends.rows.map(x=>String(x.id));if(!ids.length)return res.status(400).json({error:'Teman terpilih tidak valid.'});}else ids=[];
+  let items=Array.isArray(req.body.media_items)?req.body.media_items.map(x=>({url:String(x.url||''),media_type:String(x.media_type||'image')})).filter(x=>x.url.startsWith('/uploads/')&&['image','video'].includes(x.media_type)):[];
+  const client=await pool.connect();try{await client.query('BEGIN');
+    if(items.length){await client.query('DELETE FROM post_media WHERE post_id=$1',[id]);const first=items[0];await client.query('UPDATE posts SET caption=$1,visibility=$2,media_url=$3,media_type=$4,updated_at=now() WHERE id=$5',[caption,visibility,first.url,items.length>1?'gallery':first.media_type,id]);await client.query('INSERT INTO post_media(post_id,media_url,media_type,sort_order) SELECT $1,x.url,x.media_type,x.ord FROM json_to_recordset($2::json) AS x(url text,media_type text,ord int)',[id,JSON.stringify(items.map((x,i)=>({url:x.url,media_type:x.media_type,ord:i})))]);
+    }else{await client.query('UPDATE posts SET caption=$1,visibility=$2,updated_at=now() WHERE id=$3',[caption,visibility,id]);}
+    await client.query('DELETE FROM post_audience_users WHERE post_id=$1',[id]);if(ids.length)await client.query('INSERT INTO post_audience_users(post_id,user_id) SELECT $1,unnest($2::bigint[]) ON CONFLICT DO NOTHING',[id,ids]);await client.query('COMMIT');
+  }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
+  res.json({ok:true});
+}catch(e){console.error(e);res.status(500).json({error:'Postingan gagal diperbarui.'})}});
+
 app.delete('/api/posts/:id',auth,async(req,res)=>{try{
   const r=await pool.query('SELECT media_url FROM posts WHERE id=$1 AND user_id=$2',[req.params.id,req.user.id]);
   if(!r.rowCount)return res.status(404).json({error:'Postingan tidak ditemukan atau bukan milikmu.'});

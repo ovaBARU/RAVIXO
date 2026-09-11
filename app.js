@@ -91,10 +91,24 @@ function attachMediaViewer(){
 
 function visibilityLabel(v){return v==='private'?'🔒 Privat':v==='friends'?'👥 Teman':v==='selected'?'⭐ Teman terpilih':'🌎 Publik'}
 
-function postCard(p){const liked=!!p.liked,isMine=currentUser&&String(currentUser.id)===String(p.user_id);return `<article class="post" data-post-id="${esc(p.id)}"><div class="head">${avatarHTML({display_name:p.display_name,username:p.username,avatar_url:p.avatar_url})}<div><b class="clickable-user" data-profile-id="${esc(p.user_id)}">${esc(p.display_name||p.username||'Pengguna RAVIXO')}</b><small>@${esc(p.username||'')} · ${new Date(p.created_at).toLocaleString('id-ID')} · ${visibilityLabel(p.visibility)}</small></div>${!isMine&&currentUser?`<button class="follow-btn ${p.is_following?'following':''}" data-user-id="${esc(p.user_id)}" data-following="${p.is_following?'1':'0'}">${p.is_following&&p.is_followed_by?'👥 Teman':p.is_following?'✓ Mengikuti':'+ Ikuti'}</button>`:''}</div><p>${esc(p.caption||'')}</p>${mediaHTML(p)}<div class="stats">❤️ ${Number(p.likes_count)||0}　 💬 ${Number(p.comments_count)||0} komentar　 ↗ ${Number(p.shares_count)||0} dibagikan　 👁 ${Number(p.views_count)||0}</div><div class="actions"><button class="like-btn" data-id="${esc(p.id)}">${liked?'❤️ Disukai':'❤️ Suka'}</button><button class="comment-btn" data-id="${esc(p.id)}">💬 Komentar</button><button class="share-btn" data-id="${esc(p.id)}">↗ Bagikan</button>${isMine?`<button class="delete-post-btn" data-id="${esc(p.id)}">🗑️ Hapus</button>`:''}</div></article>`}
+function postCard(p){const liked=!!p.liked,isMine=currentUser&&String(currentUser.id)===String(p.user_id);return `<article class="post" data-post-id="${esc(p.id)}"><div class="head">${avatarHTML({display_name:p.display_name,username:p.username,avatar_url:p.avatar_url})}<div><b class="clickable-user" data-profile-id="${esc(p.user_id)}">${esc(p.display_name||p.username||'Pengguna RAVIXO')}</b><small>@${esc(p.username||'')} · ${new Date(p.created_at).toLocaleString('id-ID')} · ${visibilityLabel(p.visibility)}</small></div>${!isMine&&currentUser?`<button class="follow-btn ${p.is_following?'following':''}" data-user-id="${esc(p.user_id)}" data-following="${p.is_following?'1':'0'}">${p.is_following&&p.is_followed_by?'👥 Teman':p.is_following?'✓ Mengikuti':'+ Ikuti'}</button>`:''}</div><p>${esc(p.caption||'')}</p>${mediaHTML(p)}<div class="stats">❤️ ${Number(p.likes_count)||0}　 💬 ${Number(p.comments_count)||0} komentar　 ↗ ${Number(p.shares_count)||0} dibagikan　 👁 ${Number(p.views_count)||0}</div><div class="actions"><button class="like-btn" data-id="${esc(p.id)}">${liked?'❤️ Disukai':'❤️ Suka'}</button><button class="comment-btn" data-id="${esc(p.id)}">💬 Komentar</button><button class="share-btn" data-id="${esc(p.id)}">↗ Bagikan</button>${isMine?`<button class="edit-post-btn" data-id="${esc(p.id)}">✏️ Edit</button><button class="delete-post-btn" data-id="${esc(p.id)}">🗑️ Hapus</button>`:''}</div></article>`}
 async function loadFeed(q=''){const feed=$('#feed');feed.innerHTML='<div class="loading">Memuat feed RAVIXO...</div>';try{const d=await api('/posts?limit=50'+(q?'&q='+encodeURIComponent(q):''));currentPosts=d.posts||[];feed.innerHTML=currentPosts.length?currentPosts.map(postCard).join(''):'<div class="panel empty">Belum ada postingan.</div>';attachPostEvents();attachMediaViewer()}catch(e){feed.innerHTML='<div class="panel empty">Feed gagal dimuat.</div>';status(e.message,true)}}
+async function editPost(id){
+  if(!requireLogin())return;
+  const p=currentPosts.find(x=>String(x.id)===String(id));if(!p)return;
+  selectedMedia=[];
+  const cap=$('#captionInput'),preview=$('#mediaPreview'),title=$('#composeTitle'),input=$('#mediaInput');
+  if(cap)cap.value=p.caption||'';if(preview)preview.innerHTML=Array.isArray(p.media_items)?p.media_items.map((m,i)=>m.media_type==='video'?`<div class="media-preview-item existing"><video src="${esc(m.media_url)}" controls playsinline></video><small>${i+1}. Media tersimpan</small></div>`:`<div class="media-preview-item existing"><img src="${esc(m.media_url)}" alt="Media tersimpan ${i+1}"><small>${i+1}. Media tersimpan</small></div>`).join(''):'';
+  if($('#postVisibility'))$('#postVisibility').value=p.visibility||'public';updateAudienceUI();
+  if(title)title.textContent='Edit postingan';
+  if(input){input.value='';input.accept='image/*,video/*';input.multiple=true;input.dataset.postKind='edit';input.dataset.editPostId=String(id);}
+  const form=$('#composeForm');if(form)form.dataset.editPostId=String(id);
+  const pub=form?.querySelector('button.primary');if(pub)pub.textContent='Simpan perubahan';
+  open('composeModal');
+}
+
 async function deletePost(id,btn){if(!requireLogin())return;if(!confirm('Hapus postingan ini? Tindakan ini tidak dapat dibatalkan.'))return;if(btn)btn.disabled=true;try{await api('/posts/'+id,{method:'DELETE'});status('Postingan berhasil dihapus.');await loadFeed($('#searchInput').value.trim())}catch(e){status(e.message,true)}finally{if(btn)btn.disabled=false}}
-function attachPostEvents(){$$('.like-btn').forEach(b=>b.onclick=()=>likePost(b.dataset.id,b));$$('.comment-btn').forEach(b=>b.onclick=()=>showComments(b.dataset.id));$$('.share-btn').forEach(b=>b.onclick=()=>sharePost(b.dataset.id));$$('.delete-post-btn').forEach(b=>b.onclick=()=>deletePost(b.dataset.id,b));$$('.follow-btn').forEach(b=>b.onclick=()=>toggleFollow(b.dataset.userId,b));$$('.clickable-user,.clickable-avatar').forEach(b=>b.onclick=()=>showProfile(Number(b.dataset.profileId)));const seen=new Set();const obs='IntersectionObserver'in window?new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){const id=x.target.dataset.postId;if(!seen.has(id)){seen.add(id);api(`/posts/${id}/view`,{method:'POST'}).catch(()=>{})}}}),{threshold:.5}):null;$$('.post').forEach(c=>obs?.observe(c))}
+function attachPostEvents(){$$('.like-btn').forEach(b=>b.onclick=()=>likePost(b.dataset.id,b));$$('.comment-btn').forEach(b=>b.onclick=()=>showComments(b.dataset.id));$$('.share-btn').forEach(b=>b.onclick=()=>sharePost(b.dataset.id));$$('.edit-post-btn').forEach(b=>b.onclick=()=>editPost(b.dataset.id));$$('.delete-post-btn').forEach(b=>b.onclick=()=>deletePost(b.dataset.id,b));$$('.follow-btn').forEach(b=>b.onclick=()=>toggleFollow(b.dataset.userId,b));$$('.clickable-user,.clickable-avatar').forEach(b=>b.onclick=()=>showProfile(Number(b.dataset.profileId)));const seen=new Set();const obs='IntersectionObserver'in window?new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){const id=x.target.dataset.postId;if(!seen.has(id)){seen.add(id);api(`/posts/${id}/view`,{method:'POST'}).catch(()=>{})}}}),{threshold:.5}):null;$$('.post').forEach(c=>obs?.observe(c))}
 async function likePost(id,b){if(!requireLogin())return;try{await api(`/posts/${id}/like`,{method:b.textContent.includes('Disukai')?'DELETE':'POST'});await loadFeed($('#searchInput').value.trim())}catch(e){status(e.message,true)}}
 async function sharePost(id){if(!requireLogin())return;try{await api(`/posts/${id}/share`,{method:'POST',body:JSON.stringify({share_type:'internal'})});status('Postingan berhasil dibagikan.');await loadFeed($('#searchInput').value.trim())}catch(e){status(e.message,true)}}
 function followLabel(u){return u.is_following&&u.is_followed_by?'👥 Teman':u.is_following?'✓ Mengikuti':'+ Ikuti'}
@@ -197,17 +211,25 @@ async function uploadMedia(file){
 async function uploadMediaMultiple(files){
   const fd=new FormData();files.forEach(f=>fd.append('media',f));
   const h={};if(token())h.Authorization=`Bearer ${token()}`;
-  const r=await fetch(API_BASE+'/upload-multiple',{method:'POST',headers:h,body:fd});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(d.error||'Upload beberapa media gagal.');
-  return d.files||[];
+  const bar=$('#uploadProgress'),fill=$('#uploadProgressFill'),label=$('#uploadProgressLabel');
+  if(bar){bar.classList.remove('hidden');if(fill)fill.style.width='0%';if(label)label.textContent='0%';}
+  return await new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest();xhr.open('POST',API_BASE+'/upload-multiple');
+    Object.entries(h).forEach(([k,v])=>xhr.setRequestHeader(k,v));
+    xhr.upload.onprogress=e=>{if(e.lengthComputable){const pct=Math.round(e.loaded/e.total*100);if(fill)fill.style.width=pct+'%';if(label)label.textContent=pct+'%';status(`Mengunggah ${files.length} media... ${pct}%`);}};
+    xhr.onload=()=>{let d={};try{d=JSON.parse(xhr.responseText||'{}')}catch{}if(xhr.status>=200&&xhr.status<300){if(fill)fill.style.width='100%';if(label)label.textContent='100%';resolve(d.files||[])}else reject(new Error(d.error||'Upload beberapa media gagal.'));};
+    xhr.onerror=()=>reject(new Error('Upload gagal karena koneksi terputus.'));xhr.onabort=()=>reject(new Error('Upload dibatalkan.'));xhr.send(fd);
+  });
 }
 async function publishPost(e){
   e.preventDefault();
   if(!requireLogin())return;
+  const form=$('#composeForm'),editId=form?.dataset.editPostId||'';
   const btn=$('#composeForm button.primary'),caption=$('#captionInput')?.value.trim()||'';
   if(!caption&&!selectedMedia.length)return status('Tulis teks atau pilih foto/video terlebih dahulu.',true);
   if(btn)btn.disabled=true;
+  const progress=$('#uploadProgress');if(progress)progress.classList.add('hidden');
+  const pub=form?.querySelector('button.primary');
   try{
     const visibility=$('#postVisibility')?.value||'public';
     const audience_user_ids=visibility==='selected'?$$('#selectedFriendsList input[type=checkbox]:checked').map(x=>x.value):[];
@@ -217,15 +239,21 @@ async function publishPost(e){
       status(`Mengunggah ${selectedMedia.length} media...`);
       uploaded=await uploadMediaMultiple(selectedMedia);
     }
-    if(!uploaded.length){
+    if(editId){
+      const payload={caption,visibility,audience_user_ids};
+      if(uploaded.length)payload.media_items=uploaded.map(x=>({url:x.url,media_type:x.media_type}));
+      await api('/posts/'+editId,{method:'PUT',body:JSON.stringify(payload)});
+    }else if(!uploaded.length){
       await api('/posts',{method:'POST',body:JSON.stringify({caption,media_url:null,media_type:null,visibility,audience_user_ids})});
     }else{
       await api('/posts',{method:'POST',body:JSON.stringify({caption,media_items:uploaded.map(x=>({url:x.url,media_type:x.media_type})),media_url:uploaded[0].url,media_type:uploaded.length>1?'gallery':uploaded[0].media_type,visibility,audience_user_ids})});
     }
-    close('composeModal');
+    close('composeModal');if(progress)progress.classList.add('hidden');
     selectedMedia=[];
+    if(form){delete form.dataset.editPostId;}
     const input=$('#mediaInput');if(input)input.value='';
-    status(uploaded.length>1?`${uploaded.length} foto/video berhasil dipublikasikan.`:'Postingan berhasil dipublikasikan.');
+    if(pub)pub.textContent='Publikasikan';
+    status(editId?'Postingan berhasil diperbarui.':(uploaded.length>1?`${uploaded.length} foto/video berhasil dipublikasikan.`:'Postingan berhasil dipublikasikan.'));
     await loadFeed();
   }catch(err){status(err.message,true)}finally{if(btn)btn.disabled=false}
 }

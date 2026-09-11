@@ -459,3 +459,65 @@ button:hover{filter:brightness(1.08)}
   #composeModal #mediaPreview .media-preview-item video{max-height:58px!important}
   #composeModal #mediaPreview .media-preview-item small{font-size:7px!important}
 }
+
+
+/* RAVIXO v1.1.3 — preview media benar-benar bisa digeser horizontal */
+#composeModal #mediaPreview{
+  display:grid !important;
+  grid-template-rows:repeat(2,minmax(0,1fr)) !important;
+  grid-template-columns:none !important;
+  grid-auto-flow:column !important;
+  grid-auto-columns:calc((100% - 24px) / 5) !important;
+  grid-auto-rows:minmax(0,1fr) !important;
+  gap:6px !important;
+  overflow-x:auto !important;
+  overflow-y:hidden !important;
+  width:100% !important;
+  max-width:100% !important;
+  max-height:176px !important;
+  min-height:0 !important;
+  padding:6px !important;
+  scroll-behavior:smooth !important;
+  scroll-snap-type:x proximity !important;
+  -webkit-overflow-scrolling:touch !important;
+  overscroll-behavior-x:contain !important;
+  scrollbar-width:thin !important;
+}
+#composeModal #mediaPreview .media-preview-item{
+  width:100% !important;
+  min-width:0 !important;
+  height:78px !important;
+  margin:0 !important;
+  scroll-snap-align:start !important;
+  overflow:hidden !important;
+}
+#composeModal #mediaPreview .media-preview-item img,
+#composeModal #mediaPreview .media-preview-item video{
+  width:100% !important;
+  height:57px !important;
+  max-height:none !important;
+  object-fit:contain !important;
+  background:#080808 !important;
+  display:block !important;
+}
+#composeModal #mediaPreview .media-preview-item small{
+  font-size:8px !important;
+  line-height:12px !important;
+  height:12px !important;
+  margin-top:2px !important;
+}
+/* indikator visual bahwa area preview dapat digeser */
+#composeModal #mediaPreview::-webkit-scrollbar{height:7px}
+#composeModal #mediaPreview::-webkit-scrollbar-thumb{background:#777;border-radius:10px}
+#composeModal #mediaPreview::-webkit-scrollbar-track{background:#222;border-radius:10px}
+@media(max-width:700px){
+  #composeModal #mediaPreview{
+    grid-auto-columns:calc((100% - 20px) / 5) !important;
+    gap:5px !important;
+    max-height:154px !important;
+    grid-template-rows:repeat(2,72px) !important;
+  }
+  #composeModal #mediaPreview .media-preview-item{height:72px !important}
+  #composeModal #mediaPreview .media-preview-item img,
+  #composeModal #mediaPreview .media-preview-item video{height:51px !important}
+}

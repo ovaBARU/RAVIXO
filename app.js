@@ -15,7 +15,13 @@ function startNotificationPolling(){if(notificationPoll)clearInterval(notificati
 function stopNotificationPolling(){if(notificationPoll)clearInterval(notificationPoll);notificationPoll=null;$('#notificationBadge')?.classList.add('hidden')}
 function updateUserUI(){const name=currentUser?.display_name||'Tamu RAVIXO',u=currentUser?'@'+currentUser.username:'Belum login',i=initials(name);$('#sideName').textContent=name;$('#sideUsername').textContent=u;$('#sideAvatar').innerHTML=avatarInner(currentUser);$('#composerAvatar').innerHTML=avatarInner(currentUser);$('#profileBtn').innerHTML=avatarInner(currentUser);$('#authSideBtn').textContent=currentUser?'Keluar':'Masuk / Daftar'}
 async function loadMe(){if(!token()){updateUserUI();stopNotificationPolling();return}try{currentUser=(await api('/me')).user;updateUserUI();startNotificationPolling()}catch{localStorage.removeItem(TOKEN_KEY);currentUser=null;stopNotificationPolling();updateUserUI()}}
-function mediaHTML(p){if(!p.media_url)return '';const url=esc(p.media_url);return p.media_type==='video'?`<video class="media realmedia portrait-friendly-video" src="${url}" controls preload="metadata"></video>`:`<img class="media realmedia" src="${url}" alt="Media postingan" loading="lazy">`}
+function mediaHTML(p){
+  let items=Array.isArray(p.media_items)?p.media_items:[];
+  if(!items.length&&p.media_url)items=[{media_url:p.media_url,media_type:p.media_type||'image'}];
+  if(!items.length)return '';
+  if(items.length===1){const m=items[0],url=esc(m.media_url);return m.media_type==='video'?`<video class="media realmedia portrait-friendly-video" src="${url}" controls preload="metadata"></video>`:`<img class="media realmedia" src="${url}" alt="Media postingan" loading="lazy">`}
+  return `<div class="post-media-gallery count-${Math.min(items.length,4)}">${items.map((m,i)=>{const url=esc(m.media_url);return m.media_type==='video'?`<video class="media realmedia gallery-media" src="${url}" controls preload="metadata"></video>`:`<img class="media realmedia gallery-media" src="${url}" alt="Foto postingan ${i+1}" loading="lazy">`}).join('')}</div>`;
+}
 function openMediaViewer(url,type='image',caption=''){const viewer=$('#mediaViewer'),stage=$('#mediaViewerStage'),cap=$('#mediaViewerCaption');if(!viewer||!stage)return;stage.innerHTML=type==='video'?`<video src="${esc(url)}" controls autoplay playsinline></video>`:`<img src="${esc(url)}" alt="Media diperbesar">`;cap.textContent=caption||'';viewer.classList.remove('hidden');viewer.setAttribute('aria-hidden','false');document.body.classList.add('media-viewer-open')}
 function closeMediaViewer(){const viewer=$('#mediaViewer'),stage=$('#mediaViewerStage');if(!viewer)return;viewer.classList.add('hidden');viewer.setAttribute('aria-hidden','true');if(stage)stage.innerHTML='';document.body.classList.remove('media-viewer-open')}
 function attachMediaViewer(){
@@ -170,9 +176,7 @@ async function publishPost(e){
     if(!uploaded.length){
       await api('/posts',{method:'POST',body:JSON.stringify({caption,media_url:null,media_type:null,visibility,audience_user_ids})});
     }else{
-      for(let i=0;i<uploaded.length;i++){
-        await api('/posts',{method:'POST',body:JSON.stringify({caption:i===0?caption:'',media_url:uploaded[i].url,media_type:uploaded[i].media_type,visibility,audience_user_ids})});
-      }
+      await api('/posts',{method:'POST',body:JSON.stringify({caption,media_items:uploaded.map(x=>({url:x.url,media_type:x.media_type})),media_url:uploaded[0].url,media_type:uploaded.length>1?'gallery':uploaded[0].media_type,visibility,audience_user_ids})});
     }
     close('composeModal');
     selectedMedia=[];

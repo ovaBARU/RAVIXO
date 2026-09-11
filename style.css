@@ -113,3 +113,5 @@ body.media-viewer-open{overflow:hidden}
 .settings-section{border:1px solid #eee;border-radius:14px;padding:14px;margin:12px 0;background:#fff}.settings-section h3{margin:0 0 6px}.settings-section label{display:block;margin-top:10px}.settings-section .primary{margin-top:12px}
 
 .profile-live-card{background:#fff;border:1px solid #eee;border-radius:14px;padding:16px;margin-bottom:14px}.profile-live-card p{margin:8px 0 12px}.profile-live-card .primary{width:auto}
+
+.post-media-gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:12px;overflow:hidden;border-radius:14px}.post-media-gallery .gallery-media{width:100%;height:260px;object-fit:cover;display:block;cursor:pointer}.post-media-gallery.count-3 .gallery-media:first-child{grid-row:span 2;height:526px}.post-media-gallery.count-4 .gallery-media{height:220px}@media(max-width:640px){.post-media-gallery .gallery-media{height:180px}.post-media-gallery.count-3 .gallery-media:first-child{height:366px}.post-media-gallery.count-4 .gallery-media{height:150px}}

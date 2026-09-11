@@ -19,12 +19,56 @@ function mediaHTML(p){
   let items=Array.isArray(p.media_items)?p.media_items:[];
   if(!items.length&&p.media_url)items=[{media_url:p.media_url,media_type:p.media_type||'image'}];
   if(!items.length)return '';
-  if(items.length===1){const m=items[0],url=esc(m.media_url);return m.media_type==='video'?`<video class="media realmedia portrait-friendly-video" src="${url}" controls preload="metadata"></video>`:`<img class="media realmedia" src="${url}" alt="Media postingan" loading="lazy">`}
-  return `<div class="post-media-gallery count-${Math.min(items.length,4)}">${items.map((m,i)=>{const url=esc(m.media_url);return m.media_type==='video'?`<video class="media realmedia gallery-media" src="${url}" controls preload="metadata"></video>`:`<img class="media realmedia gallery-media" src="${url}" alt="Foto postingan ${i+1}" loading="lazy">`}).join('')}</div>`;
+  if(items.length===1){
+    const m=items[0],url=esc(m.media_url);
+    return m.media_type==='video'
+      ? `<video class="media realmedia portrait-friendly-video" src="${url}" controls preload="metadata"></video>`
+      : `<img class="media realmedia" src="${url}" alt="Media postingan" loading="lazy">`;
+  }
+  const shown=Math.min(items.length,5);
+  const cells=items.slice(0,shown).map((m,i)=>{
+    const url=esc(m.media_url), more=items.length-shown;
+    const overlay=(i===shown-1&&more>0)?`<span class="gallery-more-overlay">+${more}</span>`:'';
+    const media=m.media_type==='video'
+      ? `<video class="gallery-media" src="${url}" preload="metadata" muted playsinline></video>`
+      : `<img class="gallery-media" src="${url}" alt="Foto postingan ${i+1}" loading="lazy">`;
+    return `<button type="button" class="gallery-cell" data-gallery-post="${esc(p.id)}" data-gallery-index="${i}">${media}${overlay}</button>`;
+  }).join('');
+  return `<div class="post-media-gallery gallery-count-${shown} ${items.length>5?'has-more':''}">${cells}</div>`;
 }
+function openGallery(postId,index=0){
+  const p=currentPosts.find(x=>String(x.id)===String(postId));
+  if(!p)return;
+  const items=Array.isArray(p.media_items)?p.media_items:[];
+  if(!items.length&&p.media_url)items=[{media_url:p.media_url,media_type:p.media_type||'image'}];
+  if(!items.length)return;
+  let i=Math.max(0,Math.min(Number(index)||0,items.length-1));
+  const viewer=$('#mediaViewer'),stage=$('#mediaViewerStage'),cap=$('#mediaViewerCaption');
+  if(!viewer||!stage)return;
+  const render=()=>{
+    const m=items[i];
+    stage.innerHTML=m.media_type==='video'?`<video src="${esc(m.media_url)}" controls autoplay playsinline></video>`:`<img src="${esc(m.media_url)}" alt="Foto postingan ${i+1}">`;
+    cap.textContent=items.length>1?`${i+1} / ${items.length}`:'';
+    viewer.dataset.galleryPost=String(postId); viewer.dataset.galleryIndex=String(i);
+    viewer.classList.remove('hidden');viewer.setAttribute('aria-hidden','false');document.body.classList.add('media-viewer-open');
+  };
+  render();
+  viewer._galleryItems=items; viewer._galleryRender=render;
+}
+function galleryMove(delta){
+  const viewer=$('#mediaViewer'); if(!viewer||!viewer._galleryItems?.length)return;
+  const items=viewer._galleryItems; let i=Number(viewer.dataset.galleryIndex)||0;
+  i=(i+delta+items.length)%items.length; viewer.dataset.galleryIndex=String(i); viewer._galleryRender();
+}
+
 function openMediaViewer(url,type='image',caption=''){const viewer=$('#mediaViewer'),stage=$('#mediaViewerStage'),cap=$('#mediaViewerCaption');if(!viewer||!stage)return;stage.innerHTML=type==='video'?`<video src="${esc(url)}" controls autoplay playsinline></video>`:`<img src="${esc(url)}" alt="Media diperbesar">`;cap.textContent=caption||'';viewer.classList.remove('hidden');viewer.setAttribute('aria-hidden','false');document.body.classList.add('media-viewer-open')}
 function closeMediaViewer(){const viewer=$('#mediaViewer'),stage=$('#mediaViewerStage');if(!viewer)return;viewer.classList.add('hidden');viewer.setAttribute('aria-hidden','true');if(stage)stage.innerHTML='';document.body.classList.remove('media-viewer-open')}
 function attachMediaViewer(){
+  $$('.gallery-cell').forEach(el=>{
+    if(el.dataset.viewerBound)return;
+    el.dataset.viewerBound='1';
+    el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openGallery(el.dataset.galleryPost,el.dataset.galleryIndex)});
+  });
   $$('.realmedia,.album-media-photo,.album-media-video').forEach(el=>{
     if(el.dataset.viewerBound)return;
     el.dataset.viewerBound='1';
@@ -342,7 +386,7 @@ $$('[data-friend-tab]').forEach(b=>b.onclick=()=>loadFriends(b.dataset.friendTab
 $$('[data-close]').forEach(b=>b.onclick=()=>{if(b.dataset.close==='authModal'&&!currentUser){enforceAuthGate();return}if(b.dataset.close==='messageModal')stopChatPolling();close(b.dataset.close)});$$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m){if(m.id==='authModal'&&!currentUser){enforceAuthGate();return}if(m.id==='messageModal')stopChatPolling();m.classList.add('hidden')}}));
 $('#searchInput')?.addEventListener('input',e=>{const m=$('#mobileSearchInput');if(m)m.value=e.target.value;loadFeed(e.target.value.trim())});
 $('#mobileSearchInput')?.addEventListener('input',e=>{const d=e.target.value.trim();$('#searchInput').value=e.target.value;loadFeed(d)});$('#friendSearch')?.addEventListener('input',e=>{if(currentFriendTab==='discover')loadFriends('discover',e.target.value.trim())});
-$('#mediaViewerClose')?.addEventListener('click',closeMediaViewer);$('#mediaViewer')?.addEventListener('click',e=>{if(e.target.id==='mediaViewer')closeMediaViewer()});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeMediaViewer();['authModal','creatorModal','profileModal','notificationModal','commentModal','composeModal','messageModal','settingsModal','avatarCropModal','liveModal'].forEach(id=>close(id))}});$('#composeForm')?.addEventListener('submit',publishPost);$('#mediaInput')?.addEventListener('change',e=>{const files=[...(e.target.files||[])];if(!files.length){selectedMedia=[];previewSelectedMedia([]);return}if(files.length>10){e.target.value='';selectedMedia=[];previewSelectedMedia([]);return status('Maksimal 10 foto/video sekaligus.',true)}const postKind=e.target.dataset.postKind;if(postKind==='image'&&files.some(f=>!f.type.startsWith('image/'))){e.target.value='';selectedMedia=[];previewSelectedMedia([]);return status('Mode foto hanya menerima gambar.',true)}if(postKind==='video'&&files.some(f=>!f.type.startsWith('video/'))){e.target.value='';selectedMedia=[];previewSelectedMedia([]);return status('Mode video hanya menerima video.',true)}if(files.some(f=>f.size>100*1024*1024)){e.target.value='';selectedMedia=[];previewSelectedMedia([]);return status('Setiap file maksimal 100 MB.',true)}selectedMedia=files;previewSelectedMedia(files)});$('#changeAvatarBtn').onclick=()=>$('#avatarInput').click();$('#avatarInput').onchange=e=>{const f=e.target.files[0];if(f)uploadAvatar(f);e.target.value=''};$('#avatarCropCancel').onclick=closeAvatarCrop;$('#avatarCropReset').onclick=resetAvatarCrop;$('#avatarCropSave').onclick=saveCroppedAvatar;$('#avatarCropZoom').oninput=e=>{avatarCrop.scale=Number(e.target.value)||1;positionAvatarCrop()};$('#avatarCropStage').addEventListener('pointerdown',e=>{if(!avatarCrop.img)return;avatarCrop.drag=true;avatarCrop.sx=e.clientX;avatarCrop.sy=e.clientY;avatarCrop.ox=avatarCrop.x;avatarCrop.oy=avatarCrop.y;$('#avatarCropImage').classList.add('dragging');e.currentTarget.setPointerCapture?.(e.pointerId)});$('#avatarCropStage').addEventListener('pointermove',e=>{if(!avatarCrop.drag)return;avatarCrop.x=avatarCrop.ox+(e.clientX-avatarCrop.sx);avatarCrop.y=avatarCrop.oy+(e.clientY-avatarCrop.sy);positionAvatarCrop()});['pointerup','pointercancel','pointerleave'].forEach(ev=>$('#avatarCropStage').addEventListener(ev,()=>{avatarCrop.drag=false;$('#avatarCropImage').classList.remove('dragging')}));
+$('#mediaViewerClose')?.addEventListener('click',closeMediaViewer);$('#mediaViewerPrev')?.addEventListener('click',()=>galleryMove(-1));$('#mediaViewerNext')?.addEventListener('click',()=>galleryMove(1));$('#mediaViewer')?.addEventListener('click',e=>{if(e.target.id==='mediaViewer')closeMediaViewer()});document.addEventListener('keydown',e=>{if(!$('#mediaViewer')?.classList.contains('hidden')){if(e.key==='ArrowRight')return galleryMove(1);if(e.key==='ArrowLeft')return galleryMove(-1)}if(e.key==='Escape'){closeMediaViewer();['authModal','creatorModal','profileModal','notificationModal','commentModal','composeModal','messageModal','settingsModal','avatarCropModal','liveModal'].forEach(id=>close(id))}});$('#composeForm')?.addEventListener('submit',publishPost);$('#mediaInput')?.addEventListener('change',e=>{const files=[...(e.target.files||[])];if(!files.length){selectedMedia=[];previewSelectedMedia([]);return}if(files.length>10){e.target.value='';selectedMedia=[];previewSelectedMedia([]);return status('Maksimal 10 foto/video sekaligus.',true)}const postKind=e.target.dataset.postKind;if(postKind==='image'&&files.some(f=>!f.type.startsWith('image/'))){e.target.value='';selectedMedia=[];previewSelectedMedia([]);return status('Mode foto hanya menerima gambar.',true)}if(postKind==='video'&&files.some(f=>!f.type.startsWith('video/'))){e.target.value='';selectedMedia=[];previewSelectedMedia([]);return status('Mode video hanya menerima video.',true)}if(files.some(f=>f.size>100*1024*1024)){e.target.value='';selectedMedia=[];previewSelectedMedia([]);return status('Setiap file maksimal 100 MB.',true)}selectedMedia=files;previewSelectedMedia(files)});$('#changeAvatarBtn').onclick=()=>$('#avatarInput').click();$('#avatarInput').onchange=e=>{const f=e.target.files[0];if(f)uploadAvatar(f);e.target.value=''};$('#avatarCropCancel').onclick=closeAvatarCrop;$('#avatarCropReset').onclick=resetAvatarCrop;$('#avatarCropSave').onclick=saveCroppedAvatar;$('#avatarCropZoom').oninput=e=>{avatarCrop.scale=Number(e.target.value)||1;positionAvatarCrop()};$('#avatarCropStage').addEventListener('pointerdown',e=>{if(!avatarCrop.img)return;avatarCrop.drag=true;avatarCrop.sx=e.clientX;avatarCrop.sy=e.clientY;avatarCrop.ox=avatarCrop.x;avatarCrop.oy=avatarCrop.y;$('#avatarCropImage').classList.add('dragging');e.currentTarget.setPointerCapture?.(e.pointerId)});$('#avatarCropStage').addEventListener('pointermove',e=>{if(!avatarCrop.drag)return;avatarCrop.x=avatarCrop.ox+(e.clientX-avatarCrop.sx);avatarCrop.y=avatarCrop.oy+(e.clientY-avatarCrop.sy);positionAvatarCrop()});['pointerup','pointercancel','pointerleave'].forEach(ev=>$('#avatarCropStage').addEventListener(ev,()=>{avatarCrop.drag=false;$('#avatarCropImage').classList.remove('dragging')}));
 $('#saveSettings').onclick=async()=>{if(!requireLogin())return;const btn=$('#saveSettings');btn.disabled=true;$('#settingsMessage').textContent='Menyimpan profil...';try{const d=await api('/me',{method:'PUT',body:JSON.stringify({display_name:$('#settingsName').value.trim(),username:$('#settingsUsername').value.trim(),bio:$('#settingsBio').value.trim(),city:$('#settingsCity').value.trim(),work:$('#settingsWork').value.trim(),education:$('#settingsEducation').value.trim(),website:$('#settingsWebsite').value.trim()})});currentUser=d.user;updateUserUI();renderSettingsAvatar();$('#settingsMessage').textContent='Profil berhasil disimpan.';status('Profil berhasil diperbarui.')}catch(e){$('#settingsMessage').textContent=e.message;status(e.message,true)}finally{btn.disabled=false}};
 function enforceAuthGate(){
   if(currentUser){$('#authModal')?.classList.remove('auth-required');return}

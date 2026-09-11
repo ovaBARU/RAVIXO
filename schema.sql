@@ -34,3 +34,8 @@ CREATE TABLE IF NOT EXISTS albums(
 );
 CREATE INDEX IF NOT EXISTS albums_user_type_idx ON albums(user_id,album_type,created_at);
 CREATE INDEX IF NOT EXISTS posts_album_idx ON posts(album_id,created_at);
+
+CREATE TABLE IF NOT EXISTS post_audience_users(post_id BIGINT REFERENCES posts(id) ON DELETE CASCADE,user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,PRIMARY KEY(post_id,user_id));
+CREATE INDEX IF NOT EXISTS post_audience_user_idx ON post_audience_users(user_id,post_id);
+CREATE TABLE IF NOT EXISTS live_streams(id BIGSERIAL PRIMARY KEY,user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,title TEXT NOT NULL DEFAULT 'Siaran langsung RAVIXO',status TEXT NOT NULL DEFAULT 'live' CHECK(status IN ('live','ended')),created_at TIMESTAMPTZ DEFAULT now(),ended_at TIMESTAMPTZ);
+CREATE INDEX IF NOT EXISTS live_streams_user_status_idx ON live_streams(user_id,status,created_at);

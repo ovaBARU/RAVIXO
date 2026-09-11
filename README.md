@@ -49,3 +49,7 @@ RAVIXO now supports the official Google Identity Services button and One Tap. Ad
 - `GOOGLE_CLIENT_ID` = OAuth 2.0 Web Client ID from Google Cloud.
 
 In the Google Cloud OAuth client, add the exact RAVIXO Railway domain as an authorized JavaScript origin. Google Sign-In can automatically sign in existing Google accounts. For a brand-new RAVIXO account, Google does not provide the user's phone number to the site through standard Sign in with Google, so RAVIXO asks for the phone number once before creating the account. Private/friends/selected post interactions are also checked server-side, so clients cannot bypass post privacy by calling comment/like/share/view endpoints directly.
+
+
+### v1.0.9 — Ungu Pastel & Netral
+Tema visual diperbarui menjadi ungu pastel dan netral untuk kesan lembut, ramah, dan wellness.

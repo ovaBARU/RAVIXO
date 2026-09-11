@@ -152,3 +152,80 @@ body.media-viewer-open{overflow:hidden}
 #selectedMedia,.selected-media,.media-preview,.upload-preview,.preview-list{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;gap:10px!important;overflow-x:auto!important;overflow-y:hidden!important;max-width:100%!important;padding:8px 4px!important}
 #selectedMedia>*,.selected-media>*,.media-preview>*,.upload-preview>*,.preview-list>*{flex:0 0 auto!important}
 .post-modal .modal-footer,#createPostModal .modal-footer,.modal .modal-footer,.post-modal .publish-bar,#createPostModal .publish-bar{position:sticky!important;bottom:0!important;z-index:20!important;background:inherit!important;padding-top:12px!important}
+
+/* RAVIXO v1.0.9 — Ungu Pastel & Netral / Wellness Theme */
+:root{
+  --rv-purple:#8B7AA8;
+  --rv-purple-dark:#6F6287;
+  --rv-purple-soft:#B9A9C9;
+  --rv-purple-pale:#F2EDF7;
+  --rv-lavender:#E8E0F0;
+  --rv-neutral:#F7F5F8;
+  --rv-text:#3F3A46;
+  --rv-muted:#746D7D;
+  --rv-border:#DDD7E3;
+  --rv-white:#FFFFFF;
+}
+body{background:var(--rv-neutral);color:var(--rv-text)}
+header{background:linear-gradient(100deg,var(--rv-purple-dark),var(--rv-purple-soft));color:#fff}
+.logo b{color:var(--rv-purple-dark);background:#fff}
+header input{background:#ffffff22;color:#fff;outline-color:#ffffff55}
+.icons .profile-mini,.profile-mini,.avatar,.me .avatar{background:linear-gradient(135deg,var(--rv-purple-dark),var(--rv-purple-soft));color:#fff}
+.notification-badge{background:var(--rv-purple-dark);border-color:var(--rv-purple-dark)}
+aside{background:#fff;border-right-color:var(--rv-border)}
+nav a{color:#514A5A}
+.active{background:var(--rv-purple-pale);color:var(--rv-purple-dark)!important}
+.money{color:var(--rv-purple-dark)!important;background:#F5F1F8}
+.creator{background:linear-gradient(135deg,#F5F0F8,#EEE7F3)}
+.creator button,.panel button,.primary{background:linear-gradient(90deg,var(--rv-purple-dark),var(--rv-purple));color:#fff}
+.side-auth{border-color:var(--rv-border)}
+.hero{background:linear-gradient(115deg,#7C6B96,#B6A3C7);box-shadow:0 10px 30px #8B7AA822}
+.hero>strong{color:var(--rv-purple-dark)}
+.composer,.post,.panel{box-shadow:0 3px 15px #5C4D6B12}
+.fake{background:#ECE9EF;color:var(--rv-muted)}
+.composer button:not(.fake){color:#5E5667}
+.actions button{color:#5E5667}
+.actions button:hover{color:var(--rv-purple-dark)}
+.brandmedia{background:linear-gradient(135deg,#7B6A94,#B8A3C9);color:#fff}
+.bar i{background:linear-gradient(90deg,var(--rv-purple-dark),var(--rv-purple-soft))}
+.modal-card{border:1px solid var(--rv-border);box-shadow:0 20px 60px #4B3F571F}
+.auth-tabs .selected{color:var(--rv-purple-dark);border-bottom-color:var(--rv-purple)}
+.secondary{border-color:var(--rv-border)}
+.creator-stat{background:#F3EEF7}
+.creator-stat strong,.panel>strong{color:var(--rv-purple-dark)}
+.profile-window-head{background:linear-gradient(135deg,#fff 0%,#F8F4FA 48%,#EEE8F4 100%)}
+.profile-window-cover{background:radial-gradient(circle at 15% 20%,#ffffffaa 0 10%,transparent 32%),linear-gradient(120deg,#756486,#8B7AA8 42%,#B8A5C9 72%,#9A88AF)}
+.profile-about-section,.profile-list-section,.profile-albums-section,.profile-public-album{box-shadow:0 8px 28px #5A4B6712}
+.profile-info-grid>div{background:linear-gradient(135deg,#FAF7FC,#F1ECF5);border-color:#E4DDE9}
+.profile-composer-top .fake{background:#ECE9EF;color:#65606D}
+.profile-composer-actions button:hover{background:#F5F1F7}
+.profile-list-row,.profile-album-card{background:#fff}
+.audience-label select,.modal-card input,.modal-card textarea{border-color:var(--rv-border)}
+.selected-friends-wrap{background:#F8F6F9;border-color:var(--rv-border)}
+.post-media-gallery{box-shadow:0 2px 8px #4B3F5712}
+.follow-btn{border-color:var(--rv-purple);color:var(--rv-purple-dark)}
+.follow-btn.following,.friends-panel .follow-btn.following{background:var(--rv-purple-pale);color:var(--rv-purple-dark)}
+.profile-live-badge{color:var(--rv-purple-dark)}
+.live-card video{background:#302B35}
+.live-toolbar button{background:linear-gradient(90deg,var(--rv-purple-dark),var(--rv-purple))}
+.settings-section{border-color:var(--rv-border);background:#fff}
+.profile-live-card{border-color:var(--rv-border)}
+.chat-bubble.mine{background:#EDE6F2}
+.chat-bubble.theirs{border-color:var(--rv-border)}
+.message-user:hover{background:var(--rv-purple-pale)}
+.profile-window-handle{color:#514A5A}
+.profile-window-subtitle{color:#746D7D}
+.status{color:#55705D}
+.delete-post-btn{color:#A33D4A!important}
+/* Upload dialog: centered, soft and neutral */
+.post-modal .media-picker,.post-modal .media-actions,.post-modal .upload-actions,
+#createPostModal .media-picker,#createPostModal .media-actions,#createPostModal .upload-actions,
+.modal .media-picker,.modal .media-actions{color:var(--rv-text)}
+.post-modal .media-picker button,.post-modal .media-actions button,.post-modal .upload-actions button,
+#createPostModal .media-picker button,#createPostModal .media-actions button,#createPostModal .upload-actions button,
+.modal .media-picker button,.modal .media-actions button{border-color:var(--rv-border)!important;background:#F8F5FA!important;color:var(--rv-purple-dark)!important}
+.post-modal .media-picker button:hover,.post-modal .media-actions button:hover,
+#createPostModal .media-picker button:hover,#createPostModal .media-actions button:hover,
+.modal .media-picker button:hover,.modal .media-actions button:hover{background:#EEE7F3!important}
+/* Keep semantic errors/alerts distinct from the wellness palette */
+.form-message,.status.error{color:#A33D4A}

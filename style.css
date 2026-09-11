@@ -793,3 +793,101 @@ main{max-width:1180px!important;padding:14px 20px 30px!important}
   .mobile-nav a,.mobile-nav button{color:#617168!important;min-width:64px!important;height:52px!important;border-radius:9px!important}.mobile-nav a.active{color:var(--ref-green)!important;background:#eef7f1!important}.mobile-nav a span,.mobile-nav button span{font-size:9px!important}
   .mobile-search{background:#fff!important;border-bottom:1px solid var(--ref-line)!important}.mobile-search input{background:#f0f5f2!important;color:var(--ref-text)!important}
 }
+
+/* =========================================================
+   RAVIXO v1.3.2 — WHITE PAGE BACKGROUND
+   Green remains the identity/accent; page background is white.
+   ========================================================= */
+:root{
+  --rv-green:#146b3a;
+  --rv-green-dark:#0b3d24;
+  --rv-green-soft:#2e8b57;
+  --rv-green-pale:#eef8f1;
+  --rv-page:#ffffff;
+  --rv-surface:#ffffff;
+  --rv-text:#17231c;
+  --rv-muted:#68756e;
+  --rv-border:#dfe8e2;
+}
+html,body{background:#fff!important;color:var(--rv-text)!important}
+body{color:var(--rv-text)!important}
+.layout{background:#fff!important}
+main{background:#fff!important;color:var(--rv-text)!important}
+
+/* Green RAVIXO identity */
+header{background:#fff!important;color:var(--rv-green-dark)!important;border-bottom:1px solid #e3ebe6!important;box-shadow:0 2px 12px rgba(15,61,36,.07)!important}
+.logo{color:var(--rv-green-dark)!important}.logo b{background:var(--rv-green)!important;color:#fff!important}
+header input{background:#f1f6f3!important;color:var(--rv-text)!important;outline:1px solid #e0e9e4!important}
+header input::placeholder{color:#748078!important}
+.icons button{color:var(--rv-green-dark)!important}
+.icons .profile-mini,.profile-mini,.avatar,.me .avatar{background:linear-gradient(135deg,var(--rv-green-dark),var(--rv-green-soft))!important;color:#fff!important}
+.notification-badge{background:#d63b3b!important;border-color:#d63b3b!important}
+
+/* Sidebar remains green, while the surrounding page becomes white */
+aside{background:linear-gradient(180deg,#0b3d24 0%,#0d4b2b 100%)!important;border-right:0!important;color:#fff!important;box-shadow:2px 0 14px rgba(8,55,31,.08)}
+.me small,.head small,.muted,.creator p,.profile-username,.profile-window-stats,.profile-list-person small,.profile-album-card small{color:#758179!important}
+aside .me small,aside nav a,aside .creator p,aside .creator,aside .me{color:#fff!important}
+nav a{color:#eaf5ee!important}
+nav a:hover{background:rgba(255,255,255,.12)!important;color:#fff!important}
+.active{background:#2f8b57!important;color:#fff!important;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.money{background:rgba(255,255,255,.10)!important;color:#dff5e7!important}
+.creator{background:rgba(255,255,255,.08)!important;border:1px solid rgba(255,255,255,.12)!important}
+.creator button,.panel button,.primary{background:linear-gradient(90deg,var(--rv-green-dark),var(--rv-green-soft))!important;color:#fff!important;border:0!important}
+.side-auth{background:#fff!important;color:var(--rv-green-dark)!important;border-color:#dfe8e2!important}
+
+/* Main content/cards: clean white like the reference */
+.hero{background:linear-gradient(135deg,#eef8f1,#fff)!important;color:var(--rv-green-dark)!important;border:1px solid #dfece3!important;box-shadow:0 8px 24px rgba(17,79,44,.07)!important}
+.hero>strong{background:var(--rv-green)!important;color:#fff!important}
+.composer,.post,.panel{background:#fff!important;color:var(--rv-text)!important;border:1px solid #e1e9e4!important;box-shadow:0 3px 14px rgba(21,65,41,.07)!important}
+.fake{background:#f1f6f3!important;color:#758179!important}
+.composer button:not(.fake){color:var(--rv-green-dark)!important}
+.actions button{color:#53625a!important}
+.actions button:hover{color:var(--rv-green)!important;background:#f0f7f2!important}
+.brandmedia{background:linear-gradient(135deg,var(--rv-green-dark),var(--rv-green-soft))!important;color:#fff!important}
+.bar i{background:linear-gradient(90deg,var(--rv-green-dark),var(--rv-green-soft))!important}
+
+/* Forms and secondary actions */
+input,textarea,select,.composer input,.composer textarea{background:#fff!important;color:var(--rv-text)!important;border-color:#dce6e0!important}
+input::placeholder,textarea::placeholder{color:#87928c!important}
+select option{background:#fff;color:var(--rv-text)}
+.secondary,.friends-tab,.profile-window-tab,.side-auth{color:var(--rv-green-dark)!important;background:#fff!important;border-color:#dce6e0!important}
+.secondary:hover,.friends-tab:hover,.profile-window-tab:hover{background:#eef8f1!important}
+.post-header,.post-actions,.comment,.bar,.page-panel,.friends-panel,.auth-divider{border-color:#e2e9e5!important}
+.post-actions button{color:#53625a!important;background:transparent!important}
+.post-actions button:hover{color:var(--rv-green)!important}
+.follow-btn{border-color:var(--rv-green)!important;color:var(--rv-green-dark)!important}
+.follow-btn.following,.friends-panel .follow-btn.following{background:#eef8f1!important;color:var(--rv-green-dark)!important}
+.message-user:hover{background:#eef8f1!important}
+.chat-bubble.mine{background:#e8f5ec!important}
+.chat-bubble.theirs{background:#fff!important;border-color:#dfe8e2!important}
+
+/* Modals */
+.modal{background:rgba(7,28,17,.48)!important}
+.modal-card{background:#fff!important;color:var(--rv-text)!important;border:1px solid #dfe8e2!important;box-shadow:0 20px 60px rgba(0,45,24,.18)!important}
+.modal-close{background:#f2f6f3!important;color:#44534b!important;border-color:#dfe8e2!important}
+.auth-tabs{border-color:#e2e9e5!important}.auth-tabs button{color:#647169!important}.auth-tabs .selected{color:var(--rv-green-dark)!important;border-bottom-color:var(--rv-green)!important}
+.form-message{color:#b3261e!important}
+.upload-progress{background:#f4f8f5!important;border-color:#dfe8e2!important}.upload-progress-track{background:#e4ebe7!important}.upload-progress-track i{background:var(--rv-green)!important}
+#mediaDropZone,.media-drop-zone{background:#f8fbf9!important;border-color:#bcd5c5!important;color:#516158!important}
+.media-drop-zone:hover,.media-drop-zone.drag-over{background:#eef8f1!important;border-color:var(--rv-green-soft)!important}
+
+/* Profile/settings/message panels */
+.profile-window-head{background:linear-gradient(135deg,#fff,#f3f8f5)!important;border-bottom:1px solid #dfe8e2!important}
+.profile-window-cover{background:linear-gradient(135deg,#0b3d24,#2e8b57)!important}
+.profile-window-close{background:#fff!important;color:#1c2b23!important}
+.profile-window-body{background:#fff!important}
+.profile-about-section,.profile-list-section,.profile-albums-section,.profile-public-album{background:#fff!important;border-color:#dfe8e2!important;color:var(--rv-text)!important}
+.profile-info-grid>div,.profile-list-row,.profile-album-card{background:#f8fbf9!important;border-color:#dfe8e2!important;color:var(--rv-text)!important}
+.profile-window-tab.active{color:var(--rv-green)!important;border-bottom-color:var(--rv-green)!important}
+.profile-window-tab:hover{color:var(--rv-green)!important}
+.settings-section{border-color:#dfe8e2!important;background:#fff!important}
+.chat-messages{background:#f5f8f6!important}
+
+/* Mobile */
+.mobile-search{background:#fff!important;border-color:#dfe8e2!important}
+.mobile-search input{background:#f3f7f4!important;color:var(--rv-text)!important;border-color:#dfe8e2!important}
+.mobile-nav{background:#fff!important;border-color:#dfe8e2!important;box-shadow:0 -3px 14px rgba(17,79,44,.08)!important}
+.mobile-nav a,.mobile-nav button{color:#5b6861!important}
+.mobile-nav a.active{background:#eef8f1!important;color:var(--rv-green-dark)!important}
+
+footer{background:#fff!important;color:#7a857f!important;border-top:1px solid #e5ebe7!important}

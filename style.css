@@ -237,3 +237,124 @@ nav a{color:#514A5A}
 .media-drop-zone b{font-size:14px}.media-drop-zone span,.media-drop-zone small{font-size:12px;color:#777}
 #chooseMedia{display:block!important;width:min(280px,100%)!important;margin:8px auto!important}
 @media(max-width:700px){.media-drop-zone{min-height:95px;padding:12px}.media-drop-zone b{font-size:13px}}
+
+
+/* =========================================================
+   RAVIXO v1.1.1 — Gallery preview compact / 5 columns x 2 rows
+   ========================================================= */
+#composeModal .modal-card{
+  width:min(760px,100%);
+  max-height:90vh;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  padding:22px;
+}
+#composeModal #composeForm{
+  min-height:0;
+  overflow:auto;
+  padding-right:3px;
+  display:flex;
+  flex-direction:column;
+}
+#composeModal #mediaPreview{
+  display:grid !important;
+  grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+  grid-auto-rows:minmax(78px,auto) !important;
+  gap:6px !important;
+  width:100% !important;
+  max-height:174px !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  padding:5px !important;
+  margin:7px 0 !important;
+  align-content:start;
+}
+#composeModal #mediaPreview .media-preview-item{
+  min-width:0 !important;
+  width:100% !important;
+  margin:0 !important;
+  padding:4px !important;
+  border:1px solid var(--rv-border,#ddd) !important;
+  border-radius:8px !important;
+  background:#faf8fb !important;
+  overflow:hidden !important;
+}
+#composeModal #mediaPreview .media-preview-item img,
+#composeModal #mediaPreview .media-preview-item video{
+  width:100% !important;
+  height:62px !important;
+  max-width:none !important;
+  max-height:none !important;
+  object-fit:cover !important;
+  display:block !important;
+  margin:0 !important;
+  border-radius:6px !important;
+  background:#eee !important;
+}
+#composeModal #mediaPreview .media-preview-item small{
+  display:block !important;
+  font-size:9px !important;
+  line-height:1.15 !important;
+  margin-top:3px !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  color:var(--rv-muted,#746d7d) !important;
+}
+#composeModal #chooseMedia{
+  order:0;
+  align-self:center;
+  width:min(300px,100%) !important;
+  margin:7px auto 5px !important;
+}
+#composeModal #mediaDropZone{
+  min-height:78px !important;
+  margin:6px 0 8px !important;
+  padding:9px !important;
+}
+#composeModal #mediaDropZone .media-drop-icon{
+  font-size:18px !important;
+}
+#composeModal #mediaDropZone b{
+  font-size:13px !important;
+}
+#composeModal #mediaDropZone span,
+#composeModal #mediaDropZone small{
+  font-size:11px !important;
+}
+#composeModal #uploadProgress{
+  margin:7px 0 !important;
+  padding:9px 11px !important;
+}
+#composeModal form > button.primary{
+  position:sticky !important;
+  bottom:0 !important;
+  z-index:30 !important;
+  flex:0 0 auto !important;
+  margin-top:8px !important;
+  box-shadow:0 -8px 16px rgba(255,255,255,.9) !important;
+}
+#composeModal .modal-close{
+  z-index:40;
+}
+@media(max-width:700px){
+  #composeModal .modal-card{
+    width:100%;
+    max-height:94vh;
+    padding:16px;
+  }
+  #composeModal #mediaPreview{
+    grid-template-columns:repeat(5,minmax(54px,1fr)) !important;
+    grid-auto-rows:72px !important;
+    gap:5px !important;
+    max-height:150px !important;
+  }
+  #composeModal #mediaPreview .media-preview-item img,
+  #composeModal #mediaPreview .media-preview-item video{
+    height:52px !important;
+  }
+  #composeModal #mediaPreview .media-preview-item small{
+    font-size:8px !important;
+  }
+}

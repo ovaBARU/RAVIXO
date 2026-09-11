@@ -53,3 +53,10 @@ In the Google Cloud OAuth client, add the exact RAVIXO Railway domain as an auth
 
 ### v1.0.9 — Ungu Pastel & Netral
 Tema visual diperbarui menjadi ungu pastel dan netral untuk kesan lembut, ramah, dan wellness.
+
+
+## RAVIXO v1.1.1
+- Preview media compact: maksimal 5 kolom dan 2 baris.
+- Preview hemat ruang dengan thumbnail kecil.
+- Tombol Publikasikan tetap terlihat di bagian bawah modal.
+- Teks UI tetap menggunakan identitas RAVIXO, bukan teks dari template referensi.

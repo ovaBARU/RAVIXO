@@ -34,8 +34,8 @@ function mediaHTML(p){
   }).join('');
   return `<div class="post-media-carousel" data-carousel-count="${items.length}" data-carousel-index="0" data-post-id="${esc(p.id)}">
     <div class="feed-carousel-viewport"><div class="feed-carousel-track">${slides}</div></div>
-    <button type="button" class="feed-carousel-nav prev" aria-label="Media sebelumnya">‹</button>
-    <button type="button" class="feed-carousel-nav next" aria-label="Media berikutnya">›</button>
+    <button type="button" class="feed-carousel-nav prev" aria-label="Foto sebelumnya">‹</button>
+    <button type="button" class="feed-carousel-nav next" aria-label="Foto berikutnya">›</button>
     <div class="feed-carousel-counter">1 / ${items.length}</div>
     <div class="feed-carousel-dots">${items.map((_,i)=>`<button type="button" data-dot="${i}" aria-label="Lihat media ${i+1}"></button>`).join('')}</div>
   </div>`;
